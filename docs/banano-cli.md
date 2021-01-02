@@ -12,7 +12,7 @@
 
 # check pending using private key:
 
-        npm start bcheckpending ${accountIx} ${maxAccountsPending}
+        npm start blcheckpending ${accountIx} ${maxAccountsPending}
 
         npm start blcheckpending 0 10
 

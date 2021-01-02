@@ -100,6 +100,9 @@ const getLedgerAccountSigner = async (config, accountIx) => {
 const commands = {};
 
 commands['blgetaccount'] = async (index) => {
+  if (index == undefined) {
+    throw Error('index is a required parameter');
+  }
   const config = configs.banano;
   bananodeApi.setUrl(config.bananodeUrl);
   const accountData = await getLedgerAccountData(config, index);
