@@ -6,7 +6,6 @@ const bananoUtil = bananojs.bananoUtil;
 const bananodeApi = bananojs.bananodeApi;
 const loggingUtil = bananojs.loggingUtil;
 const depositUtil = bananojs.depositUtil;
-const crypto = require('crypto');
 const BananoHwApp = require('hw-app-nano').Banano;
 const transportNodeHid = require('@ledgerhq/hw-transport-node-hid');
 
