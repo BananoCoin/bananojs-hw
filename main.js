@@ -20,7 +20,7 @@ commands['blgetaccount'] = async (index) => {
   }
   const config = indexUtil.getConfig();
   bananodeApi.setUrl(config.bananodeUrl);
-  const accountData = await indexUtil.getLedgerAccountData(config, index);
+  const accountData = await indexUtil.getLedgerAccountData(index);
   console.log('banano getaccount publicKey', accountData.publicKey);
   console.log('banano getaccount account', accountData.account);
 };
@@ -34,7 +34,7 @@ commands['blcheckpending'] = async (index, count) => {
   }
   const config = indexUtil.getConfig();
   bananodeApi.setUrl(config.bananodeUrl);
-  const accountData = await indexUtil.getLedgerAccountData(config, index);
+  const accountData = await indexUtil.getLedgerAccountData(index);
   const account = accountData.account;
   console.log('banano checkpending accountData', account);
   const pending = await bananodeApi.getAccountsPending([account], parseInt(count));
@@ -44,7 +44,7 @@ commands['blcheckpending'] = async (index, count) => {
 commands['blreceive'] = async (index, specificPendingBlockHash) => {
   const config = indexUtil.getConfig();
   bananodeApi.setUrl(config.bananodeUrl);
-  const accountSigner = await indexUtil.getLedgerAccountSigner(config, index);
+  const accountSigner = await indexUtil.getLedgerAccountSigner(index);
   const account = accountSigner.getAccount();
   let representative = await bananodeApi.getAccountRepresentative(account);
   if (!(representative)) {
@@ -61,7 +61,7 @@ commands['blreceive'] = async (index, specificPendingBlockHash) => {
 commands['blsendraw'] = async (index, destAccount, amountRaw) => {
   const config = indexUtil.getConfig();
   bananodeApi.setUrl(config.bananodeUrl);
-  const accountSigner = await indexUtil.getLedgerAccountSigner(config, index);
+  const accountSigner = await indexUtil.getLedgerAccountSigner(index);
   try {
     const response = await bananoUtil.sendFromPrivateKey(bananodeApi, accountSigner, destAccount, amountRaw, config.prefix);
     console.log('banano sendbanano response', response);
@@ -86,7 +86,7 @@ commands['baccountinfo'] = async (account) => {
 };
 
 const run = async () => {
-  console.log('bananojs');
+  console.log('bananojs-hw');
   if (process.argv.length < 3) {
     console.log('#usage:');
     console.log('https://github.com/BananoCoin/bananojs-hw/blob/master/docs/banano-cli.md');

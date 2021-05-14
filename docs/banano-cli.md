@@ -1,5 +1,44 @@
 ### with ledger
 
+# check usage instructions:
+
+        npm start
+
+        bananojs-hw
+        #usage:
+        https://github.com/BananoCoin/bananojs-hw/blob/master/docs/banano-cli.md
+
+# check that the ledger device is not plugged in:
+
+        npm start ledgerinfo
+
+        bananojs-hw
+        ledger info { pathCount: 0, found: false }
+
+# check that the ledger app is plugged in but app is not open:
+
+        npm start ledgerinfo
+
+        bananojs-hw
+        ledger info {
+          pathCount: 1,
+          found: true,
+          supported: true,
+          error: 'Ledger device: CLA_NOT_SUPPORTED (0x6e00)'
+        }
+
+# check that the ledger app is plugged in and app is open:
+
+        npm start ledgerinfo
+        
+        bananojs-hw
+        ledger info {
+          pathCount: 1,
+          found: true,
+          supported: true,
+          config: { version: '1.2.4', coinName: 'Banano' }
+        }
+
 # get the account for the private key:
 
         npm start blgetaccount ${accountIx}

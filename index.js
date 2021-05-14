@@ -57,12 +57,12 @@
       const path = paths[0];
       const transport = await transportNodeHid.default.open(path);
       const banHwAppInst = new BananoHwApp(transport);
-      const accountData = await banHwAppInst.getAddress(getLedgerPath(config, index));
+      const accountData = await banHwAppInst.getAddress(getLedgerPath(index));
       accountData.account = accountData.address;
       delete accountData.address;
       return accountData;
     } catch (error) {
-      console.trace('banano getaccount error', error.message);
+      console.trace('banano getaccount error', error);
     }
   };
 
@@ -81,7 +81,7 @@
     const transport = await transportNodeHid.default.open(path);
     const banHwAppInst = new BananoHwApp(transport);
     const signer = {};
-    const ledgerPath = getLedgerPath(config, accountIx);
+    const ledgerPath = getLedgerPath(accountIx);
     const accountData = await banHwAppInst.getAddress(ledgerPath);
     signer.getPublicKey = () => {
       return accountData.publicKey;
