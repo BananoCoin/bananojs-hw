@@ -37,14 +37,18 @@
     if (retval.found) {
       const path = paths[0];
       const transport = await transportNodeHid.default.open(path);
-      retval.supported = await transportNodeHid.default.isSupported();
-      if (retval.supported) {
-        const banHwAppInst = new BananoHwApp(transport);
-        try {
-          retval.config = await banHwAppInst.getAppConfiguration();
-        } catch (error) {
-          retval.error = error.message;
+      try {
+        retval.supported = await transportNodeHid.default.isSupported();
+        if (retval.supported) {
+          const banHwAppInst = new BananoHwApp(transport);
+          try {
+            retval.config = await banHwAppInst.getAppConfiguration();
+          } catch (error) {
+            retval.error = error.message;
+          }
         }
+      } finally {
+        await transport.close();
       }
     }
     return retval;

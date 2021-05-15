@@ -9,7 +9,7 @@
 
 ### update version in package-lock.json
   npm i;
-
+  npm audit fix;
   npm run eslint;
 
 ### good to commit here, so published code is same as NPM code.
