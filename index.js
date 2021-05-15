@@ -60,11 +60,15 @@
       const paths = await transportNodeHid.default.list();
       const path = paths[0];
       const transport = await transportNodeHid.default.open(path);
-      const banHwAppInst = new BananoHwApp(transport);
-      const accountData = await banHwAppInst.getAddress(getLedgerPath(index));
-      accountData.account = accountData.address;
-      delete accountData.address;
-      return accountData;
+      try {
+        const banHwAppInst = new BananoHwApp(transport);
+        const accountData = await banHwAppInst.getAddress(getLedgerPath(index));
+        accountData.account = accountData.address;
+        delete accountData.address;
+        return accountData;
+      } finally {
+        await transport.close();
+      }
     } catch (error) {
       console.trace('banano getaccount error', error);
     }
@@ -83,10 +87,15 @@
     const paths = await transportNodeHid.default.list();
     const path = paths[0];
     const transport = await transportNodeHid.default.open(path);
-    const banHwAppInst = new BananoHwApp(transport);
+    let accountData;
+    try {
+      const banHwAppInst = new BananoHwApp(transport);
+      const ledgerPath = getLedgerPath(accountIx);
+      accountData = await banHwAppInst.getAddress(ledgerPath);
+    } finally {
+      transport.close();
+    }
     const signer = {};
-    const ledgerPath = getLedgerPath(accountIx);
-    const accountData = await banHwAppInst.getAddress(ledgerPath);
     signer.getPublicKey = () => {
       return accountData.publicKey;
     };
@@ -94,40 +103,48 @@
       return accountData.address;
     };
     signer.signBlock = async (blockData) => {
-      // console.log('signer.signBlock', 'blockData', blockData);
-      const hwBlockData = {};
-      if (blockData.previous == '0000000000000000000000000000000000000000000000000000000000000000') {
-        hwBlockData.representative = blockData.representative;
-        hwBlockData.balance = blockData.balance;
-        hwBlockData.sourceBlock = blockData.link;
-      } else {
-        hwBlockData.previousBlock = blockData.previous;
-        hwBlockData.representative = blockData.representative;
-        hwBlockData.balance = blockData.balance;
-        hwBlockData.recipient = index.getBananoAccount(blockData.link);
+      const transport = await transportNodeHid.default.open(path);
+      try {
+        const banHwAppInst = new BananoHwApp(transport);
+        const ledgerPath = getLedgerPath(accountIx);
 
-        const cacheBlockData = {};
-        const cacheBlocks = await bananodeApi.getBlocks([blockData.previous], true);
-        // console.log('signer.signBlock', 'cacheBlocks', cacheBlocks);
-        const cacheBlock = cacheBlocks.blocks[blockData.previous];
-        // console.log('signer.signBlock', 'cacheBlock', cacheBlock);
-        cacheBlockData.previousBlock = cacheBlock.previous;
-        cacheBlockData.representative = cacheBlock.representative;
-        cacheBlockData.balance = cacheBlock.balance;
-        cacheBlockData.recipient = index.getBananoAccount(cacheBlock.link);
-        // console.log('signer.signBlock', 'cacheBlockData', cacheBlockData);
-        try {
-          // const cacheResponse =
-          await banHwAppInst.cacheBlock(ledgerPath, cacheBlockData, cacheBlock.signature);
-          // console.log('signer.signBlock', 'cacheResponse', cacheResponse);
-        } catch (error) {
-          console.log('signer.signBlock', 'error', error.message);
-          console.trace(error);
+        // console.log('signer.signBlock', 'blockData', blockData);
+        const hwBlockData = {};
+        if (blockData.previous == '0000000000000000000000000000000000000000000000000000000000000000') {
+          hwBlockData.representative = blockData.representative;
+          hwBlockData.balance = blockData.balance;
+          hwBlockData.sourceBlock = blockData.link;
+        } else {
+          hwBlockData.previousBlock = blockData.previous;
+          hwBlockData.representative = blockData.representative;
+          hwBlockData.balance = blockData.balance;
+          hwBlockData.recipient = index.getBananoAccount(blockData.link);
+
+          const cacheBlockData = {};
+          const cacheBlocks = await bananodeApi.getBlocks([blockData.previous], true);
+          // console.log('signer.signBlock', 'cacheBlocks', cacheBlocks);
+          const cacheBlock = cacheBlocks.blocks[blockData.previous];
+          // console.log('signer.signBlock', 'cacheBlock', cacheBlock);
+          cacheBlockData.previousBlock = cacheBlock.previous;
+          cacheBlockData.representative = cacheBlock.representative;
+          cacheBlockData.balance = cacheBlock.balance;
+          cacheBlockData.recipient = index.getBananoAccount(cacheBlock.link);
+          // console.log('signer.signBlock', 'cacheBlockData', cacheBlockData);
+          try {
+            // const cacheResponse =
+            await banHwAppInst.cacheBlock(ledgerPath, cacheBlockData, cacheBlock.signature);
+            // console.log('signer.signBlock', 'cacheResponse', cacheResponse);
+          } catch (error) {
+            console.log('signer.signBlock', 'error', error.message);
+            console.trace(error);
+          }
         }
-      }
 
-      // console.log('signer.signBlock', 'hwBlockData', hwBlockData);
-      return await banHwAppInst.signBlock(ledgerPath, hwBlockData);
+        // console.log('signer.signBlock', 'hwBlockData', hwBlockData);
+        return await banHwAppInst.signBlock(ledgerPath, hwBlockData);
+      } finally {
+        transport.close();
+      }
     };
     return signer;
   };
