@@ -1,6 +1,6 @@
 {
   "name": "@bananocoin/bananojs-hw",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "module": "index.js",
   "repository": {
     "type": "git",
@@ -8,6 +8,7 @@
   },
   "scripts": {
     "eslint": "eslint --fix 'main.js';eslint --fix 'index.js'",
+    "preflight": "npm update;npm outdated;npm i;npm audit fix;npm run eslint;",
     "start": "node main.js"
   },
   "keywords": [],
