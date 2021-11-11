@@ -1,6 +1,6 @@
 {
   "name": "@bananocoin/bananojs-hw",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "module": "index.js",
   "repository": {
     "type": "git",
@@ -8,22 +8,24 @@
   },
   "scripts": {
     "eslint": "eslint --fix 'main.js';eslint --fix 'index.js'",
-    "preflight": "npm update;npm outdated;npm i;npm audit fix;npm run eslint;",
+    "npm-check-updates": "npm-check-updates -u",
+    "preflight": "npm update;npm run npm-check-updates;npm outdated;npm i;npm audit fix;npm run eslint;",
     "start": "node main.js"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@bananocoin/bananojs": "^2.4.23",
-    "@ledgerhq/hw-transport-node-hid": "^6.7.0",
+    "@bananocoin/bananojs": "^2.4.24",
+    "@ledgerhq/hw-transport-node-hid": "^6.11.2",
     "hw-app-nano": "^1.3.0"
   },
   "devDependencies": {
     "chai": "^4.3.4",
-    "eslint": "^7.32.0",
+    "eslint": "^8.2.0",
     "eslint-config-google": "^0.14.0",
-    "mocha": "^9.1.2",
+    "mocha": "^9.1.3",
+    "npm-check-updates": "^12.0.2",
     "nyc": "^15.1.0"
   },
   "description": "JavaScript utilities for the banano cryptocurrency.",
