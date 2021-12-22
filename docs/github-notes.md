@@ -1,4 +1,4 @@
-### force only one version of camo-banano-light-wallet
+### force only one version of bananojs-hw
 
 rm -rf .git;
 git init;
