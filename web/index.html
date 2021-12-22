@@ -1,0 +1,44 @@
+<!-- index.html -->
+<!doctype html>
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <title>Bananojs-Hw</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body onLoad=onLoad()>
+  <h1>Bananojs-Hw</h1>
+  <a href="../dist/BananoHwApp.js" target="_blank">latest BananoHwApp</a>
+  <a href="../dist/TransportWebUSB.js" target="_blank">latest TransportWebUSB</a>
+  <table class="w100pct">
+    <tr>
+      <td class="w100pct border_black align_top">
+        <button onclick='checkLedger();return false;'>Check Ledger Account and Pending</button>
+        <h2>Account</h2>
+        <div id="account" class="break_all"></div>
+        <h2>Withdraw</h2>
+        <h3>Withdraw To Account</h3>
+        <input id="withdrawAccount" class='monospace small bg_white' type='text' size='66' max_length='64' value='' defaultValue='To Account'>
+        <h3>Withdraw Amount (Bananos)</h3>
+        <input id='withdrawAmount' class='monospace small bg_white' type='number' size='66' max_length='64' min='0' step='any' value='0.0'>
+        <br>
+        <button type='button' title='Withdraw' class='px120x24 bg_lightgreen' onclick='withdraw(); return false;'>Withdraw</button>
+        <br>
+        <div id='withdrawResponse' class='monospace small bordered bg_lightgreen selectable'>
+        </div>
+      </td>
+    </tr>
+  </table>
+  <script src="https://bananocoin.github.io/bananojs/dist/bananocoin-bananojs.js"></script>
+  <script src="https://bananocoin.github.io/bananojs-hw/dist/BananoHwApp.js"></script>
+  <script src="https://bananocoin.github.io/bananojs-hw/dist/TransportWebUSB.js"></script>
+  <!-- <script src="https://bananocoin.github.io/bananojs-hw/web/bananojs-hw.js"></script> -->
+  <script src="bananojs-hw.js"></script>
+  <script src="https://bananocoin.github.io/bananojs-hw/index.js"></script>
+  <script src="main.js"></script>
+</body>
+
+</html>

@@ -173,7 +173,7 @@
   if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = exports;
   } else {
-    window.bananocoinBananojs = exports;
+    window.bananocoinBananojsHw = exports;
   }
 })();
 // FINISHED BOTTOM nodejs/browser hack
