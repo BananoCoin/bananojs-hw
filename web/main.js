@@ -2,10 +2,10 @@ const MAX_PENDING = 10;
 
 const ACCOUNT_INDEX = 0;
 
-const onLoad = () => {
+window.onLoad = () => {
 };
 
-const checkLedger = async () => {
+window.checkLedger = async () => {
   const config = window.bananocoinBananojsHw.bananoConfig;
   window.bananocoinBananojs.setBananodeApiUrl(config.bananodeUrl);
   const accountInfoElt = document.getElementById('account');
@@ -74,7 +74,7 @@ const checkLedger = async () => {
   }
 };
 
-const withdraw = async () => {
+window.withdraw = async () => {
   const withdrawAccountElt = document.querySelector('#withdrawAccount');
   const withdrawAmountElt = document.querySelector('#withdrawAmount');
   const withdrawResponseElt = document.querySelector('#withdrawResponse');

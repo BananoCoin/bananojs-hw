@@ -9,7 +9,6 @@ if (window.bananocoin.bananojsHw === undefined) {
 }
 window.bananocoin.bananojsHw.getLedgerAccountData = async (index) => {
   // https://github.com/BananoCoin/bananovault/blob/master/src/app/services/ledger.service.ts#L128
-  const config = window.bananocoinBananojsHw.bananoConfig;
   const getLedgerPath = window.bananocoinBananojsHw.getLedgerPath;
 
   const BananoHwApp = window.BananoHwApp;
