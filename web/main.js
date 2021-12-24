@@ -6,6 +6,14 @@ window.onLoad = () => {
 };
 
 window.checkLedger = async () => {
+  try {
+    await checkLedgerOrError();
+  } catch (error) {
+    console.trace(error);
+  }
+};
+
+window.checkLedgerOrError = async () => {
   const config = window.bananocoinBananojsHw.bananoConfig;
   window.bananocoinBananojs.setBananodeApiUrl(config.bananodeUrl);
   const accountInfoElt = document.getElementById('account');
