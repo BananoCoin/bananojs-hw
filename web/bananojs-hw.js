@@ -21,7 +21,7 @@ window.bananocoin.bananojsHw.getLedgerAccountData = async (index) => {
     const ledgerPath = getLedgerPath(index);
     // console.log('getLedgerAccountData', 'ledgerPath', ledgerPath);
     const accountData = await banHwAppInst.getAddress(ledgerPath);
-    // console.log('getLedgerAccountData', 'accountData', accountData);
+    console.log('getLedgerAccountData', 'accountData', accountData);
     accountData.account = accountData.address;
     delete accountData.address;
     return accountData;

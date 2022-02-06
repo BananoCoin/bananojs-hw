@@ -16,7 +16,29 @@
   <table class="w100pct">
     <tr>
       <td class="w100pct border_black align_top">
-        <button onclick='checkLedger();return false;'>Check Ledger Account and Pending</button>
+        <h2>Ledger</h2>
+        <button onclick='checkLedger();return false;'>Check Ledger Account and Pending</button><br>
+        <hr>
+        <h2>Reuse Stored Seed</h2>
+        Password for Stored Seed (required)<br>
+        <form>
+          <input id="oldSeedPassword" class='monospace small bg_white' type='password' size='66' max_length='64' value='' defaultValue='password' autocomplete='current-password'><br>
+          <button onclick='checkOldSeed();return false;'>Check Old Seed Account and Pending</button>
+          <hr>
+          <button onclick='clearOldSeed();return false;'>Clear Old Seed (confirmation required)</button>
+        </form>
+        <hr>
+        <h2>Store New Seed</h2>
+        Seed (required)<br>
+        <form>
+          <input id="newSeed" class='monospace small bg_white' type='text' size='66' max_length='64' value='' defaultValue='seed' autocomplete='off'>
+          <button onclick='newRandomSeed();return false;'>Random Seed</button>
+          <br>
+          Password for Storing Seed (optional)<br>
+          <input id="newSeedPassword" class='monospace small bg_white' type='password' size='66' max_length='64' value='' defaultValue='password' autocomplete='new-password'><br>
+          <button onclick='checkNewSeed();return false;'>Check New Seed Account and Pending</button>
+        </form>
+        <hr>
         <h2>Account</h2>
         <div id="account" class="break_all"></div>
         <h2>Withdraw</h2>
