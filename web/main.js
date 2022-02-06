@@ -4,9 +4,11 @@ const ACCOUNT_INDEX = 0;
 
 let accountSigner = undefined;
 let accountData = undefined;
+let ledgerInUse = false;
 const config = window.bananocoinBananojsHw.bananoConfig;
 
-window.onLoad = () => {
+window.onLoad = async () => {
+  await synchUI();
 };
 
 window.checkLedger = async () => {
@@ -17,28 +19,38 @@ window.checkLedger = async () => {
   }
 };
 
-const clearAccountInfo = () => {
+const clearAllPasswordInfo = () => {
+  clearNewPasswordInfo();
+  document.getElementById('oldSeedPassword').value = '';
+};
+
+const clearNewPasswordInfo = () => {
+  document.getElementById('newSeed').value = '';
+  document.getElementById('newSeedPassword').value = '';
+};
+
+const clearAccountInfo = async () => {
   accountSigner = undefined;
   accountData = undefined;
-  document.getElementById('account').innerText = '';
+  document.getElementById('accountInfo').innerText = '';
   document.getElementById('withdrawAmount').value = '';
   document.getElementById('withdrawAccount').value = '';
+  await synchUI();
 };
 
 const getAccountInfo = async () => {
   window.bananocoinBananojs.setBananodeApiUrl(config.bananodeUrl);
-  const accountInfoElt = document.getElementById('account');
+  const accountInfoElt = document.getElementById('accountInfo');
   const account = accountData.account;
-  accountInfoElt.innerText = account;
+  let innerText = `${account}\n`;
   const accountInfo = await window.bananocoinBananojs.getAccountInfo(account, true);
   // console.log('getAccountInfo', 'accountInfo', accountInfo);
   if (accountInfo.error !== undefined) {
-    accountInfoElt.innerText += '\n';
-    accountInfoElt.innerText += accountInfo.error;
+    innerText += `${accountInfo.error}\n`;
   } else {
     const balanceParts = await window.bananocoinBananojs.getBananoPartsFromRaw(accountInfo.balance);
     const balanceDescription = await window.bananocoinBananojs.getBananoPartsDescription(balanceParts);
-    accountInfoElt.innerText += '\nBalance ' + balanceDescription;
+    innerText += `Balance ${balanceDescription}\n`;
 
     if (balanceParts.raw == '0') {
       delete balanceParts.raw;
@@ -53,9 +65,7 @@ const getAccountInfo = async () => {
   // console.log('banano checkpending accountData', account);
 
   const pendingResponse = await window.bananocoinBananojs.getAccountsPending([account], MAX_PENDING, true);
-  // console.log('banano checkpending pendingResponse', pendingResponse);
-  accountInfoElt.innerText += '\n';
-  accountInfoElt.innerText += JSON.stringify(pendingResponse);
+  console.log('banano checkpending pendingResponse', pendingResponse);
   const pendingBlocks = pendingResponse.blocks[account];
 
   if (pendingBlocks !== undefined) {
@@ -63,19 +73,25 @@ const getAccountInfo = async () => {
     if (hashes.length !== 0) {
       const specificPendingBlockHash = hashes[0];
 
+      innerText += '\n';
+      innerText += `Receiving hash 1 of ${hashes.length }\n`;
+
       const bananodeApi = window.bananocoinBananojs.bananodeApi;
       let representative = await bananodeApi.getAccountRepresentative(account);
       if (!(representative)) {
         representative = account;
       }
-      console.log('banano checkpending config', config);
+      // console.log('banano checkpending config', config);
 
       const loggingUtil = window.bananocoinBananojs.loggingUtil;
       const depositUtil = window.bananocoinBananojs.depositUtil;
 
-
-      accountInfoElt.innerText += '\n';
-      accountInfoElt.innerText += 'CHECK LEDGER FOR BLOCK ' + specificPendingBlockHash;
+      if (ledgerInUse) {
+        innerText += `CHECK LEDGER FOR BLOCK ${specificPendingBlockHash}\n`;
+      } else {
+        innerText += `RECEIVING BLOCK ${specificPendingBlockHash}\n`;
+      }
+      accountInfoElt.innerText = innerText;
 
       console.log('banano checkpending account', account);
       console.log('banano checkpending accountSigner', accountSigner);
@@ -84,13 +100,16 @@ const getAccountInfo = async () => {
 
       const receiveResponse = await depositUtil.receive(loggingUtil, bananodeApi, account, accountSigner, representative, specificPendingBlockHash, config.prefix);
 
-      accountInfoElt.innerText += '\n';
-      accountInfoElt.innerText += JSON.stringify(receiveResponse);
+      innerText += `${receiveResponse.receiveMessage}\n`;
+      innerText += `${receiveResponse.pendingMessage}\n`;
     }
   }
+  accountInfoElt.innerText = innerText;
+  await synchUI();
 };
 
 window.checkLedgerOrError = async () => {
+  clearAllPasswordInfo();
   clearAccountInfo();
   window.bananocoinBananojs.setBananodeApiUrl(config.bananodeUrl);
   const TransportWebUSB = window.TransportWebUSB;
@@ -102,7 +121,10 @@ window.checkLedgerOrError = async () => {
       publicKey: accountSigner.getPublicKey(),
       account: accountSigner.getAccount(),
     };
-    // console.log('connectLedger', 'accountData', accountData);
+    ledgerInUse = true;
+    clearAllPasswordInfo();
+    await synchUI();
+    console.log('connectLedger', 'accountData', accountData);
     await getAccountInfo();
   }
 };
@@ -118,7 +140,9 @@ window.withdraw = async () => {
   const config = window.bananocoinBananojsHw.bananoConfig;
   try {
     const amountRaw = window.bananocoinBananojs.getBananoDecimalAmountAsRaw(withdrawAmount);
-    withdrawResponseElt.innerText = 'CHECK LEDGER FOR SEND BLOCK APPROVAL';
+    if (ledgerInUse) {
+      withdrawResponseElt.innerText = 'CHECK LEDGER FOR SEND BLOCK APPROVAL\n';
+    }
     const response = await bananoUtil.sendFromPrivateKey(bananodeApi, accountSigner, withdrawAccount, amountRaw, config.prefix);
     console.log('withdraw', 'response', response);
     withdrawResponseElt.innerText = 'Response' + JSON.stringify(response);
@@ -126,105 +150,6 @@ window.withdraw = async () => {
     console.log('withdraw', 'error', error);
     withdrawResponseElt.innerText = 'Error:' + error.message;
   }
-};
-
-// from https://github.com/bradyjoslin/webcrypto-example/blob/master/script.js
-const enc = new TextEncoder();
-const dec = new TextDecoder();
-
-const getPasswordKey = (password) => {
-  return window.crypto.subtle.importKey(
-      'raw',
-      enc.encode(password),
-      'PBKDF2',
-      false,
-      ['deriveKey'],
-  );
-};
-
-const deriveKey = (passwordKey, salt, keyUsage) => {
-  return window.crypto.subtle.deriveKey(
-      {
-        name: 'PBKDF2',
-        salt: salt,
-        iterations: 250000,
-        hash: 'SHA-256',
-      },
-      passwordKey,
-      {name: 'AES-GCM', length: 256},
-      false,
-      keyUsage,
-  );
-};
-
-const encryptData = async (secretData, password) => {
-  // console.log('encryptData', 'secretData', secretData);
-  // console.log('encryptData', 'password', password);
-  const salt = window.crypto.getRandomValues(new Uint8Array(16));
-  const iv = window.crypto.getRandomValues(new Uint8Array(12));
-  const passwordKey = await getPasswordKey(password);
-  const aesKey = await deriveKey(passwordKey, salt, ['encrypt']);
-  const encryptedContent = await window.crypto.subtle.encrypt(
-      {
-        name: 'AES-GCM',
-        iv: iv,
-      },
-      aesKey,
-      new TextEncoder().encode(secretData),
-  );
-
-  const encryptedContentArr = new Uint8Array(encryptedContent);
-  const buff = new Uint8Array(
-      salt.byteLength + iv.byteLength + encryptedContentArr.byteLength,
-  );
-  buff.set(salt, 0);
-  buff.set(iv, salt.byteLength);
-  buff.set(encryptedContentArr, salt.byteLength + iv.byteLength);
-  const base64Buff = bufferToBase64(buff);
-  // console.log('encryptData', 'base64Buff', base64Buff);
-  return base64Buff;
-};
-
-const bufferToBase64 = (buff) => {
-  return btoa(String.fromCharCode.apply(null, buff));
-};
-
-const base64ToBuffer = (b64) => {
-  if (b64 == undefined) {
-    throw Error('b64 is required');
-  }
-  // console.log('base64ToBuffer', 'b64', b64);
-  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(null));
-};
-
-const decryptData = async (encryptedData, password) => {
-  if (encryptedData == undefined) {
-    throw Error('encryptedData is required');
-  }
-  if (password == undefined) {
-    throw Error('password is required');
-  }
-  const encryptedDataBuff = base64ToBuffer(encryptedData);
-  const salt = encryptedDataBuff.slice(0, 16);
-  const iv = encryptedDataBuff.slice(16, 16 + 12);
-  const data = encryptedDataBuff.slice(16 + 12);
-  const passwordKey = await getPasswordKey(password);
-  const aesKey = await deriveKey(passwordKey, salt, ['decrypt']);
-  let decryptedContent;
-  try {
-    decryptedContent = await window.crypto.subtle.decrypt(
-        {
-          name: 'AES-GCM',
-          iv: iv,
-        },
-        aesKey,
-        data,
-    );
-  } catch (error) {
-    throw Error('password failed to decrypt seed');
-  }
-  // console.log('decryptData', 'decryptedContent', decryptedContent);
-  return dec.decode(decryptedContent);
 };
 
 const setAccountSignerDataFromSeed = async (seed) => {
@@ -242,6 +167,7 @@ const setAccountSignerDataFromSeed = async (seed) => {
 
 window.checkOldSeed = async () => {
   clearAccountInfo();
+  clearNewPasswordInfo();
   const encryptedSeed = window.localStorage.getItem('encryptedSeed');
   if (encryptedSeed == undefined) {
     alert('no seed found in local storage');
@@ -250,7 +176,7 @@ window.checkOldSeed = async () => {
     console.log('checkOldSeed', 'encryptedSeed', encryptedSeed);
     console.log('checkOldSeed', 'oldSeedPassword', oldSeedPassword);
     try {
-      unencryptedSeed = await decryptData(encryptedSeed, oldSeedPassword);
+      unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(encryptedSeed, oldSeedPassword);
       console.log('checkOldSeed', 'unencryptedSeed', unencryptedSeed);
       // alert(unencryptedSeed);
       await setAccountSignerDataFromSeed(unencryptedSeed);
@@ -270,6 +196,8 @@ window.clearOldSeed = async () => {
       window.localStorage.removeItem('encryptedSeed');
     }
   }
+  clearAllPasswordInfo();
+  clearAccountInfo();
 };
 
 window.newRandomSeed = async () => {
@@ -285,12 +213,53 @@ window.checkNewSeed = async () => {
   const newSeedPassword = document.getElementById('newSeedPassword').value;
   console.log('checkNewSeed', 'newSeed', newSeed);
   console.log('checkNewSeed', 'newSeedPassword', newSeedPassword);
-  const encryptedSeed = await encryptData(newSeed, newSeedPassword);
+  const encryptedSeed = await window.bananocoin.passwordUtils.encryptData(newSeed, newSeedPassword);
   window.localStorage.setItem('encryptedSeed', encryptedSeed);
   console.log('checkNewSeed', 'encryptedSeed', encryptedSeed);
   console.log('checkNewSeed', 'localStorage.encryptedSeed', window.localStorage.getItem('encryptedSeed'));
-  unencryptedSeed = await decryptData(encryptedSeed, newSeedPassword);
+  unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(encryptedSeed, newSeedPassword);
   console.log('checkNewSeed', 'unencryptedSeed', unencryptedSeed);
   // alert(unencryptedSeed);
+  document.getElementById('oldSeedPassword').value = newSeedPassword;
+  clearNewPasswordInfo();
   await setAccountSignerDataFromSeed(unencryptedSeed);
+};
+
+const synchUI = async () => {
+  const hide = (id) => {
+    document.getElementById(id).setAttribute('class', 'border_black display_none');
+  };
+  const show = (id) => {
+    document.getElementById(id).setAttribute('class', 'border_black');
+  };
+  hide('unsupportedLedger');
+  hide('unsupportedCrypto');
+  hide('checkLedger');
+  hide('checkOldSeed');
+  hide('clearOldSeed');
+  hide('checkNewSeed');
+  hide('accountData');
+  const isSupportedFlag = await window.TransportWebUSB.isSupported();
+  if (isSupportedFlag) {
+    show('checkLedger');
+  } else {
+    show('unsupportedLedger');
+  }
+
+  if (window.bananocoin.passwordUtils.enabled()) {
+    const encryptedSeed = window.localStorage.getItem('encryptedSeed');
+    console.log('synchUI', 'encryptedSeed', encryptedSeed);
+    if (encryptedSeed == undefined) {
+      show('checkNewSeed');
+    } else {
+      show('checkOldSeed');
+      show('clearOldSeed');
+    }
+  } else {
+    show('unsupportedCrypto');
+  }
+
+  if (accountData !== undefined) {
+    show('accountData');
+  }
 };

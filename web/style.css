@@ -35,3 +35,7 @@
 .align_top {
   vertical-align: top;
 }
+
+.display_none {
+  display: none;
+}
