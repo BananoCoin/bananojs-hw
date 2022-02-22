@@ -30,7 +30,7 @@
 # check that the ledger app is plugged in and app is open:
 
         npm start ledgerinfo
-        
+
         bananojs-hw
         ledger info {
           pathCount: 1,

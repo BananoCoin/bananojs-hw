@@ -43,20 +43,27 @@ const getAccountInfo = async () => {
   const accountInfoElt = document.getElementById('accountInfo');
   const account = accountData.account;
   let innerText = `${account}\n`;
-  const accountInfo = await window.bananocoinBananojs.getAccountInfo(account, true);
+  const accountInfo = await window.bananocoinBananojs.getAccountInfo(
+    account,
+    true
+  );
   // console.log('getAccountInfo', 'accountInfo', accountInfo);
   if (accountInfo.error !== undefined) {
     innerText += `${accountInfo.error}\n`;
   } else {
-    const balanceParts = await window.bananocoinBananojs.getBananoPartsFromRaw(accountInfo.balance);
-    const balanceDescription = await window.bananocoinBananojs.getBananoPartsDescription(balanceParts);
+    const balanceParts = await window.bananocoinBananojs.getBananoPartsFromRaw(
+      accountInfo.balance
+    );
+    const balanceDescription =
+      await window.bananocoinBananojs.getBananoPartsDescription(balanceParts);
     innerText += `Balance ${balanceDescription}\n`;
 
     if (balanceParts.raw == '0') {
       delete balanceParts.raw;
     }
 
-    const bananoDecimal = await window.bananocoinBananojs.getBananoPartsAsDecimal(balanceParts);
+    const bananoDecimal =
+      await window.bananocoinBananojs.getBananoPartsAsDecimal(balanceParts);
     const withdrawAmountElt = document.getElementById('withdrawAmount');
     withdrawAmountElt.value = bananoDecimal;
     const withdrawAccountElt = document.getElementById('withdrawAccount');
@@ -64,7 +71,11 @@ const getAccountInfo = async () => {
   }
   // console.log('banano checkpending accountData', account);
 
-  const pendingResponse = await window.bananocoinBananojs.getAccountsPending([account], MAX_PENDING, true);
+  const pendingResponse = await window.bananocoinBananojs.getAccountsPending(
+    [account],
+    MAX_PENDING,
+    true
+  );
   console.log('banano checkpending pendingResponse', pendingResponse);
   const pendingBlocks = pendingResponse.blocks[account];
 
@@ -74,11 +85,11 @@ const getAccountInfo = async () => {
       const specificPendingBlockHash = hashes[0];
 
       innerText += '\n';
-      innerText += `Receiving hash 1 of ${hashes.length }\n`;
+      innerText += `Receiving hash 1 of ${hashes.length}\n`;
 
       const bananodeApi = window.bananocoinBananojs.bananodeApi;
       let representative = await bananodeApi.getAccountRepresentative(account);
-      if (!(representative)) {
+      if (!representative) {
         representative = account;
       }
       // console.log('banano checkpending config', config);
@@ -96,9 +107,20 @@ const getAccountInfo = async () => {
       console.log('banano checkpending account', account);
       console.log('banano checkpending accountSigner', accountSigner);
       console.log('banano checkpending representative', representative);
-      console.log('banano checkpending specificPendingBlockHash', specificPendingBlockHash);
+      console.log(
+        'banano checkpending specificPendingBlockHash',
+        specificPendingBlockHash
+      );
 
-      const receiveResponse = await depositUtil.receive(loggingUtil, bananodeApi, account, accountSigner, representative, specificPendingBlockHash, config.prefix);
+      const receiveResponse = await depositUtil.receive(
+        loggingUtil,
+        bananodeApi,
+        account,
+        accountSigner,
+        representative,
+        specificPendingBlockHash,
+        config.prefix
+      );
 
       innerText += `${receiveResponse.receiveMessage}\n`;
       innerText += `${receiveResponse.pendingMessage}\n`;
@@ -116,7 +138,9 @@ window.checkLedgerOrError = async () => {
   const isSupportedFlag = await TransportWebUSB.isSupported();
   console.log('connectLedger', 'isSupportedFlag', isSupportedFlag);
   if (isSupportedFlag) {
-    accountSigner = await window.bananocoin.bananojsHw.getLedgerAccountSigner(ACCOUNT_INDEX);
+    accountSigner = await window.bananocoin.bananojsHw.getLedgerAccountSigner(
+      ACCOUNT_INDEX
+    );
     accountData = {
       publicKey: accountSigner.getPublicKey(),
       account: accountSigner.getAccount(),
@@ -139,11 +163,18 @@ window.withdraw = async () => {
   const bananoUtil = window.bananocoinBananojs.bananoUtil;
   const config = window.bananocoinBananojsHw.bananoConfig;
   try {
-    const amountRaw = window.bananocoinBananojs.getBananoDecimalAmountAsRaw(withdrawAmount);
+    const amountRaw =
+      window.bananocoinBananojs.getBananoDecimalAmountAsRaw(withdrawAmount);
     if (ledgerInUse) {
       withdrawResponseElt.innerText = 'CHECK LEDGER FOR SEND BLOCK APPROVAL\n';
     }
-    const response = await bananoUtil.sendFromPrivateKey(bananodeApi, accountSigner, withdrawAccount, amountRaw, config.prefix);
+    const response = await bananoUtil.sendFromPrivateKey(
+      bananodeApi,
+      accountSigner,
+      withdrawAccount,
+      amountRaw,
+      config.prefix
+    );
     console.log('withdraw', 'response', response);
     withdrawResponseElt.innerText = 'Response' + JSON.stringify(response);
   } catch (error) {
@@ -176,7 +207,10 @@ window.checkOldSeed = async () => {
     console.log('checkOldSeed', 'encryptedSeed', encryptedSeed);
     console.log('checkOldSeed', 'oldSeedPassword', oldSeedPassword);
     try {
-      unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(encryptedSeed, oldSeedPassword);
+      unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(
+        encryptedSeed,
+        oldSeedPassword
+      );
       console.log('checkOldSeed', 'unencryptedSeed', unencryptedSeed);
       // alert(unencryptedSeed);
       await setAccountSignerDataFromSeed(unencryptedSeed);
@@ -213,11 +247,21 @@ window.checkNewSeed = async () => {
   const newSeedPassword = document.getElementById('newSeedPassword').value;
   console.log('checkNewSeed', 'newSeed', newSeed);
   console.log('checkNewSeed', 'newSeedPassword', newSeedPassword);
-  const encryptedSeed = await window.bananocoin.passwordUtils.encryptData(newSeed, newSeedPassword);
+  const encryptedSeed = await window.bananocoin.passwordUtils.encryptData(
+    newSeed,
+    newSeedPassword
+  );
   window.localStorage.setItem('encryptedSeed', encryptedSeed);
   console.log('checkNewSeed', 'encryptedSeed', encryptedSeed);
-  console.log('checkNewSeed', 'localStorage.encryptedSeed', window.localStorage.getItem('encryptedSeed'));
-  unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(encryptedSeed, newSeedPassword);
+  console.log(
+    'checkNewSeed',
+    'localStorage.encryptedSeed',
+    window.localStorage.getItem('encryptedSeed')
+  );
+  unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(
+    encryptedSeed,
+    newSeedPassword
+  );
   console.log('checkNewSeed', 'unencryptedSeed', unencryptedSeed);
   // alert(unencryptedSeed);
   document.getElementById('oldSeedPassword').value = newSeedPassword;
@@ -227,7 +271,9 @@ window.checkNewSeed = async () => {
 
 const synchUI = async () => {
   const hide = (id) => {
-    document.getElementById(id).setAttribute('class', 'border_black display_none');
+    document
+      .getElementById(id)
+      .setAttribute('class', 'border_black display_none');
   };
   const show = (id) => {
     document.getElementById(id).setAttribute('class', 'border_black');

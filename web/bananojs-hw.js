@@ -1,8 +1,8 @@
-
 // begin hacks thaat make require() work.
 window.bananocoin.other['@bananocoin/bananojs'] = window.bananocoinBananojs;
 window.bananocoin.other['hw-app-nano'] = window.BananoHwApp;
-window.bananocoin.other['@ledgerhq/hw-transport-node-hid'] = window.TransportWebUSB;
+window.bananocoin.other['@ledgerhq/hw-transport-node-hid'] =
+  window.TransportWebUSB;
 // end hacks thaat make require() work.
 if (window.bananocoin.bananojsHw === undefined) {
   window.bananocoin.bananojsHw = {};
@@ -71,7 +71,10 @@ window.bananocoin.bananojsHw.getLedgerAccountSigner = async (accountIx) => {
 
       // console.log('signer.signBlock', 'blockData', blockData);
       const hwBlockData = {};
-      if (blockData.previous == '0000000000000000000000000000000000000000000000000000000000000000') {
+      if (
+        blockData.previous ==
+        '0000000000000000000000000000000000000000000000000000000000000000'
+      ) {
         hwBlockData.representative = blockData.representative;
         hwBlockData.balance = blockData.balance;
         hwBlockData.sourceBlock = blockData.link;
@@ -79,21 +82,32 @@ window.bananocoin.bananojsHw.getLedgerAccountSigner = async (accountIx) => {
         hwBlockData.previousBlock = blockData.previous;
         hwBlockData.representative = blockData.representative;
         hwBlockData.balance = blockData.balance;
-        hwBlockData.recipient = window.bananocoinBananojs.getBananoAccount(blockData.link);
+        hwBlockData.recipient = window.bananocoinBananojs.getBananoAccount(
+          blockData.link
+        );
 
         const cacheBlockData = {};
-        const cacheBlocks = await bananodeApi.getBlocks([blockData.previous], true);
+        const cacheBlocks = await bananodeApi.getBlocks(
+          [blockData.previous],
+          true
+        );
         // console.log('signer.signBlock', 'cacheBlocks', cacheBlocks);
         const cacheBlock = cacheBlocks.blocks[blockData.previous];
         // console.log('signer.signBlock', 'cacheBlock', cacheBlock);
         cacheBlockData.previousBlock = cacheBlock.previous;
         cacheBlockData.representative = cacheBlock.representative;
         cacheBlockData.balance = cacheBlock.balance;
-        cacheBlockData.recipient = window.bananocoinBananojs.getBananoAccount(cacheBlock.link);
+        cacheBlockData.recipient = window.bananocoinBananojs.getBananoAccount(
+          cacheBlock.link
+        );
         // console.log('signer.signBlock', 'cacheBlockData', cacheBlockData);
         try {
           // const cacheResponse =
-          await banHwAppInst.cacheBlock(ledgerPath, cacheBlockData, cacheBlock.signature);
+          await banHwAppInst.cacheBlock(
+            ledgerPath,
+            cacheBlockData,
+            cacheBlock.signature
+          );
           // console.log('signer.signBlock', 'cacheResponse', cacheResponse);
         } catch (error) {
           console.log('signer.signBlock', 'error', error.message);

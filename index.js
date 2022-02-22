@@ -1,8 +1,8 @@
 'use strict';
 
 // STARTED TOP nodejs/browser hack
-(function() {
-// FINISHED TOP nodejs/browser hack
+(function () {
+  // FINISHED TOP nodejs/browser hack
 
   const bananojs = require('@bananocoin/bananojs');
   const index = bananojs;
@@ -110,7 +110,10 @@
 
         // console.log('signer.signBlock', 'blockData', blockData);
         const hwBlockData = {};
-        if (blockData.previous == '0000000000000000000000000000000000000000000000000000000000000000') {
+        if (
+          blockData.previous ==
+          '0000000000000000000000000000000000000000000000000000000000000000'
+        ) {
           hwBlockData.representative = blockData.representative;
           hwBlockData.balance = blockData.balance;
           hwBlockData.sourceBlock = blockData.link;
@@ -121,7 +124,10 @@
           hwBlockData.recipient = index.getBananoAccount(blockData.link);
 
           const cacheBlockData = {};
-          const cacheBlocks = await bananodeApi.getBlocks([blockData.previous], true);
+          const cacheBlocks = await bananodeApi.getBlocks(
+            [blockData.previous],
+            true
+          );
           // console.log('signer.signBlock', 'cacheBlocks', cacheBlocks);
           const cacheBlock = cacheBlocks.blocks[blockData.previous];
           // console.log('signer.signBlock', 'cacheBlock', cacheBlock);
@@ -132,7 +138,11 @@
           // console.log('signer.signBlock', 'cacheBlockData', cacheBlockData);
           try {
             // const cacheResponse =
-            await banHwAppInst.cacheBlock(ledgerPath, cacheBlockData, cacheBlock.signature);
+            await banHwAppInst.cacheBlock(
+              ledgerPath,
+              cacheBlockData,
+              cacheBlock.signature
+            );
             // console.log('signer.signBlock', 'cacheResponse', cacheResponse);
           } catch (error) {
             console.log('signer.signBlock', 'error', error.message);
@@ -148,7 +158,6 @@
     };
     return signer;
   };
-
 
   // STARTED BOTTOM nodejs/browser hack
   const exports = (() => {
