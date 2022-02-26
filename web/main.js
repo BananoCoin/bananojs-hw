@@ -44,15 +44,15 @@ const getAccountInfo = async () => {
   const account = accountData.account;
   let innerText = `${account}\n`;
   const accountInfo = await window.bananocoinBananojs.getAccountInfo(
-    account,
-    true
+      account,
+      true,
   );
   // console.log('getAccountInfo', 'accountInfo', accountInfo);
   if (accountInfo.error !== undefined) {
     innerText += `${accountInfo.error}\n`;
   } else {
     const balanceParts = await window.bananocoinBananojs.getBananoPartsFromRaw(
-      accountInfo.balance
+        accountInfo.balance,
     );
     const balanceDescription =
       await window.bananocoinBananojs.getBananoPartsDescription(balanceParts);
@@ -72,9 +72,9 @@ const getAccountInfo = async () => {
   // console.log('banano checkpending accountData', account);
 
   const pendingResponse = await window.bananocoinBananojs.getAccountsPending(
-    [account],
-    MAX_PENDING,
-    true
+      [account],
+      MAX_PENDING,
+      true,
   );
   console.log('banano checkpending pendingResponse', pendingResponse);
   const pendingBlocks = pendingResponse.blocks[account];
@@ -108,18 +108,18 @@ const getAccountInfo = async () => {
       console.log('banano checkpending accountSigner', accountSigner);
       console.log('banano checkpending representative', representative);
       console.log(
-        'banano checkpending specificPendingBlockHash',
-        specificPendingBlockHash
+          'banano checkpending specificPendingBlockHash',
+          specificPendingBlockHash,
       );
 
       const receiveResponse = await depositUtil.receive(
-        loggingUtil,
-        bananodeApi,
-        account,
-        accountSigner,
-        representative,
-        specificPendingBlockHash,
-        config.prefix
+          loggingUtil,
+          bananodeApi,
+          account,
+          accountSigner,
+          representative,
+          specificPendingBlockHash,
+          config.prefix,
       );
 
       innerText += `${receiveResponse.receiveMessage}\n`;
@@ -139,7 +139,7 @@ window.checkLedgerOrError = async () => {
   console.log('connectLedger', 'isSupportedFlag', isSupportedFlag);
   if (isSupportedFlag) {
     accountSigner = await window.bananocoin.bananojsHw.getLedgerAccountSigner(
-      ACCOUNT_INDEX
+        ACCOUNT_INDEX,
     );
     accountData = {
       publicKey: accountSigner.getPublicKey(),
@@ -169,11 +169,11 @@ window.withdraw = async () => {
       withdrawResponseElt.innerText = 'CHECK LEDGER FOR SEND BLOCK APPROVAL\n';
     }
     const response = await bananoUtil.sendFromPrivateKey(
-      bananodeApi,
-      accountSigner,
-      withdrawAccount,
-      amountRaw,
-      config.prefix
+        bananodeApi,
+        accountSigner,
+        withdrawAccount,
+        amountRaw,
+        config.prefix,
     );
     console.log('withdraw', 'response', response);
     withdrawResponseElt.innerText = 'Response' + JSON.stringify(response);
@@ -196,6 +196,11 @@ const setAccountSignerDataFromSeed = async (seed) => {
   await getAccountInfo();
 };
 
+const setAccountSignerDataFromMnemonic = async (mnemonic) => {
+  const seed = window.bip39.mnemonicToEntropy(mnemonic);
+  await setAccountSignerDataFromSeed(seed);
+};
+
 window.checkOldSeed = async () => {
   clearAccountInfo();
   clearNewPasswordInfo();
@@ -208,8 +213,8 @@ window.checkOldSeed = async () => {
     console.log('checkOldSeed', 'oldSeedPassword', oldSeedPassword);
     try {
       unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(
-        encryptedSeed,
-        oldSeedPassword
+          encryptedSeed,
+          oldSeedPassword,
       );
       console.log('checkOldSeed', 'unencryptedSeed', unencryptedSeed);
       // alert(unencryptedSeed);
@@ -248,19 +253,19 @@ window.checkNewSeed = async () => {
   console.log('checkNewSeed', 'newSeed', newSeed);
   console.log('checkNewSeed', 'newSeedPassword', newSeedPassword);
   const encryptedSeed = await window.bananocoin.passwordUtils.encryptData(
-    newSeed,
-    newSeedPassword
+      newSeed,
+      newSeedPassword,
   );
   window.localStorage.setItem('encryptedSeed', encryptedSeed);
   console.log('checkNewSeed', 'encryptedSeed', encryptedSeed);
   console.log(
-    'checkNewSeed',
-    'localStorage.encryptedSeed',
-    window.localStorage.getItem('encryptedSeed')
+      'checkNewSeed',
+      'localStorage.encryptedSeed',
+      window.localStorage.getItem('encryptedSeed'),
   );
   unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(
-    encryptedSeed,
-    newSeedPassword
+      encryptedSeed,
+      newSeedPassword,
   );
   console.log('checkNewSeed', 'unencryptedSeed', unencryptedSeed);
   // alert(unencryptedSeed);
@@ -269,11 +274,85 @@ window.checkNewSeed = async () => {
   await setAccountSignerDataFromSeed(unencryptedSeed);
 };
 
+window.checkOldMnemonic = async () => {
+  clearAccountInfo();
+  clearNewPasswordInfo();
+  const encryptedMnemonic = window.localStorage.getItem('encryptedMnemonic');
+  if (encryptedMnemonic == undefined) {
+    alert('no mnemonic found in local storage');
+  } else {
+    const oldMnemonicPassword = document.getElementById('oldMnemonicPassword').value;
+    console.log('checkOldMnemonic', 'encryptedMnemonic', encryptedMnemonic);
+    console.log('checkOldMnemonic', 'oldMnemonicPassword', oldMnemonicPassword);
+    try {
+      unencryptedMnemonic = await window.bananocoin.passwordUtils.decryptData(
+          encryptedMnemonic,
+          oldMnemonicPassword,
+      );
+      console.log('checkOldMnemonic', 'unencryptedMnemonic', unencryptedMnemonic);
+      // alert(unencryptedMnemonic);
+      await setAccountSignerDataFromMnemonic(unencryptedMnemonic);
+    } catch (error) {
+      console.trace('checkOldMnemonic', 'error', error);
+      alert(error.message);
+    }
+  }
+};
+
+window.clearOldMnemonic = async () => {
+  const encryptedMnemonic = window.localStorage.getItem('encryptedMnemonic');
+  if (encryptedMnemonic == undefined) {
+    alert('no mnemonic found in local storage');
+  } else {
+    if (confirm('Clear saved mnemonic, are you sure? This is not reversible.')) {
+      window.localStorage.removeItem('encryptedMnemonic');
+    }
+  }
+  clearAllPasswordInfo();
+  clearAccountInfo();
+};
+
+window.newRandomMnemonic = async () => {
+  const seedBytes = new Uint8Array(32);
+  window.crypto.getRandomValues(seedBytes);
+  const seed = window.bananocoinBananojs.bananoUtil.bytesToHex(seedBytes);
+  const mnemonic = window.bip39.entropyToMnemonic(seed);
+  document.getElementById('newMnemonic').value = mnemonic;
+};
+
+window.checkNewMnemonic = async () => {
+  clearAccountInfo();
+  const newMnemonic = document.getElementById('newMnemonic').value;
+  const newMnemonicPassword = document.getElementById('newMnemonicPassword').value;
+  console.log('checkNewMnemonic', 'newMnemonic', newMnemonic);
+  console.log('checkNewMnemonic', 'newMnemonicPassword', newMnemonicPassword);
+  const encryptedMnemonic = await window.bananocoin.passwordUtils.encryptData(
+      newMnemonic,
+      newMnemonicPassword,
+  );
+  window.localStorage.setItem('encryptedMnemonic', encryptedMnemonic);
+  console.log('checkNewMnemonic', 'encryptedMnemonic', encryptedMnemonic);
+  console.log(
+      'checkNewMnemonic',
+      'localStorage.encryptedMnemonic',
+      window.localStorage.getItem('encryptedMnemonic'),
+  );
+  unencryptedMnemonic = await window.bananocoin.passwordUtils.decryptData(
+      encryptedMnemonic,
+      newMnemonicPassword,
+  );
+  console.log('checkNewMnemonic', 'unencryptedMnemonic', unencryptedMnemonic);
+  // alert(unencryptedMnemonic);
+  document.getElementById('oldMnemonicPassword').value = newMnemonicPassword;
+  clearNewPasswordInfo();
+  await setAccountSignerDataFromMnemonic(unencryptedMnemonic);
+};
+
 const synchUI = async () => {
   const hide = (id) => {
     document
-      .getElementById(id)
-      .setAttribute('class', 'border_black display_none');
+        .getElementById(id)
+        .setAttribute('class', 'border_black display_none');
   };
   const show = (id) => {
     document.getElementById(id).setAttribute('class', 'border_black');
@@ -284,6 +363,9 @@ const synchUI = async () => {
   hide('checkOldSeed');
   hide('clearOldSeed');
   hide('checkNewSeed');
+  hide('checkOldMnemonic');
+  hide('clearOldMnemonic');
+  hide('checkNewMnemonic');
   hide('accountData');
   const isSupportedFlag = await window.TransportWebUSB.isSupported();
   if (isSupportedFlag) {
@@ -300,6 +382,14 @@ const synchUI = async () => {
     } else {
       show('checkOldSeed');
       show('clearOldSeed');
+    }
+    const encryptedMnemonic = window.localStorage.getItem('encryptedMnemonic');
+    console.log('synchUI', 'encryptedMnemonic', encryptedMnemonic);
+    if (encryptedMnemonic == undefined) {
+      show('checkNewMnemonic');
+    } else {
+      show('checkOldMnemonic');
+      show('clearOldMnemonic');
     }
   } else {
     show('unsupportedCrypto');

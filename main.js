@@ -38,8 +38,8 @@ commands['blcheckpending'] = async (index, count) => {
   const account = accountData.account;
   console.log('banano checkpending accountData', account);
   const pending = await bananodeApi.getAccountsPending(
-    [account],
-    parseInt(count)
+      [account],
+      parseInt(count),
   );
   console.log('banano checkpending response', pending);
 };
@@ -55,13 +55,13 @@ commands['blreceive'] = async (index, specificPendingBlockHash) => {
   }
   try {
     const response = await depositUtil.receive(
-      loggingUtil,
-      bananodeApi,
-      account,
-      accountSigner,
-      representative,
-      specificPendingBlockHash,
-      config.prefix
+        loggingUtil,
+        bananodeApi,
+        account,
+        accountSigner,
+        representative,
+        specificPendingBlockHash,
+        config.prefix,
     );
     console.log('banano receive response', response);
   } catch (error) {
@@ -75,11 +75,11 @@ commands['blsendraw'] = async (index, destAccount, amountRaw) => {
   const accountSigner = await indexUtil.getLedgerAccountSigner(index);
   try {
     const response = await bananoUtil.sendFromPrivateKey(
-      bananodeApi,
-      accountSigner,
-      destAccount,
-      amountRaw,
-      config.prefix
+        bananodeApi,
+        accountSigner,
+        destAccount,
+        amountRaw,
+        config.prefix,
     );
     console.log('banano sendbanano response', response);
   } catch (error) {
@@ -97,14 +97,14 @@ commands['baccountinfo'] = async (account) => {
   bananodeApi.setUrl(config.bananodeUrl);
   const response = await bananodeApi.getAccountInfo(account, true);
   response.balanceParts = await bananoUtil.getAmountPartsFromRaw(
-    response.balance,
-    config.prefix
+      response.balance,
+      config.prefix,
   );
   response.balanceDescription = await bananojs.getBananoPartsDescription(
-    response.balanceParts
+      response.balanceParts,
   );
   response.balanceDecimal = await bananojs.getBananoPartsAsDecimal(
-    response.balanceParts
+      response.balanceParts,
   );
   console.log('banano accountinfo response', response);
 };
@@ -114,7 +114,7 @@ const run = async () => {
   if (process.argv.length < 3) {
     console.log('#usage:');
     console.log(
-      'https://github.com/BananoCoin/bananojs-hw/blob/master/docs/banano-cli.md'
+        'https://github.com/BananoCoin/bananojs-hw/blob/master/docs/banano-cli.md',
     );
   } else {
     const command = process.argv[2];

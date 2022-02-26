@@ -83,13 +83,13 @@ window.bananocoin.bananojsHw.getLedgerAccountSigner = async (accountIx) => {
         hwBlockData.representative = blockData.representative;
         hwBlockData.balance = blockData.balance;
         hwBlockData.recipient = window.bananocoinBananojs.getBananoAccount(
-          blockData.link
+            blockData.link,
         );
 
         const cacheBlockData = {};
         const cacheBlocks = await bananodeApi.getBlocks(
-          [blockData.previous],
-          true
+            [blockData.previous],
+            true,
         );
         // console.log('signer.signBlock', 'cacheBlocks', cacheBlocks);
         const cacheBlock = cacheBlocks.blocks[blockData.previous];
@@ -98,15 +98,15 @@ window.bananocoin.bananojsHw.getLedgerAccountSigner = async (accountIx) => {
         cacheBlockData.representative = cacheBlock.representative;
         cacheBlockData.balance = cacheBlock.balance;
         cacheBlockData.recipient = window.bananocoinBananojs.getBananoAccount(
-          cacheBlock.link
+            cacheBlock.link,
         );
         // console.log('signer.signBlock', 'cacheBlockData', cacheBlockData);
         try {
           // const cacheResponse =
           await banHwAppInst.cacheBlock(
-            ledgerPath,
-            cacheBlockData,
-            cacheBlock.signature
+              ledgerPath,
+              cacheBlockData,
+              cacheBlock.signature,
           );
           // console.log('signer.signBlock', 'cacheResponse', cacheResponse);
         } catch (error) {

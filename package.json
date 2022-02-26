@@ -1,23 +1,20 @@
 {
   "name": "@bananocoin/bananojs-hw",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "module": "index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bananocoin/bananojs-hw.git"
   },
   "scripts": {
-    "browserify": "npm run browserify-BananoHwApp;npm run browserify-TransportWebUSB;",
+    "browserify": "npm run browserify-BananoHwApp && npm run browserify-TransportWebUSB && npm run browserify-bip39",
+    "browserify-bip39": "browserify browserify/bip39.js -o dist/bip39.js",
     "browserify-BananoHwApp": "browserify browserify/BananoHwApp.js -o dist/BananoHwApp.js",
     "browserify-TransportWebUSB": "browserify browserify/TransportWebUSB.js -o dist/TransportWebUSB.js",
-    "eslint": "eslint --fix 'main.js';eslint --fix 'index.js';eslint --fix 'web'",
+    "eslint": "eslint --fix '**/*.js'",
     "npm-check-updates": "npm-check-updates --target minor -u",
-    "preflight": "npm update;npm run npm-check-updates;npm outdated;npm i;npm audit fix;npm run eslint;npm run prettier;npm run browserify;",
-    "prettier-browserify": "prettier \"browserify/**/**.{ts,js,json,css,scss,html,md}\" --single-quote --write",
-    "prettier-docs": "prettier \"docs/**/**.{ts,js,json,css,scss,html,md}\" --single-quote --write",
-    "prettier-web": "prettier \"web/**/**.{ts,js,json,css,scss,html,md}\" --single-quote --write",
-    "prettier-root": "prettier \"*.{ts,js,json,css,scss,html}\" --single-quote --write",
-    "prettier": "npm run prettier-browserify;npm run prettier-docs;npm run prettier-web;npm run prettier-root;",
+    "preflight": "npm update && npm run npm-check-updates && npm outdated && npm i && npm audit fix && npm run browserify && npm run eslint && npm run prettier && npm outdated",
+    "prettier": "prettier \"**/**.{ts,json,css,scss,html}\" --write",
     "start": "node main.js"
   },
   "keywords": [],
@@ -30,9 +27,10 @@
   },
   "devDependencies": {
     "@ledgerhq/hw-transport-webusb": "^6.24.1",
+    "bip39": "^3.0.4",
     "browserify": "^17.0.0",
     "chai": "^4.3.6",
-    "eslint": "^7.32.0",
+    "eslint": "^8.10.0",
     "eslint-config-google": "^0.14.0",
     "mocha": "^9.2.1",
     "npm-check-updates": "^12.4.0",

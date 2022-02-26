@@ -1,7 +1,7 @@
 'use strict';
 
 // STARTED TOP nodejs/browser hack
-(function () {
+(function() {
   // FINISHED TOP nodejs/browser hack
 
   const bananojs = require('@bananocoin/bananojs');
@@ -125,8 +125,8 @@
 
           const cacheBlockData = {};
           const cacheBlocks = await bananodeApi.getBlocks(
-            [blockData.previous],
-            true
+              [blockData.previous],
+              true,
           );
           // console.log('signer.signBlock', 'cacheBlocks', cacheBlocks);
           const cacheBlock = cacheBlocks.blocks[blockData.previous];
@@ -139,9 +139,9 @@
           try {
             // const cacheResponse =
             await banHwAppInst.cacheBlock(
-              ledgerPath,
-              cacheBlockData,
-              cacheBlock.signature
+                ledgerPath,
+                cacheBlockData,
+                cacheBlock.signature,
             );
             // console.log('signer.signBlock', 'cacheResponse', cacheResponse);
           } catch (error) {
