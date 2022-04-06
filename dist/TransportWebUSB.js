@@ -266,7 +266,7 @@ exports.getBluetoothServiceUuids = getBluetoothServiceUuids;
 var getInfosForServiceUuid = function (uuid) { return serviceUuidToInfos[uuid.toLowerCase()]; };
 exports.getInfosForServiceUuid = getInfosForServiceUuid;
 
-},{"semver":43}],4:[function(require,module,exports){
+},{"semver":42}],4:[function(require,module,exports){
 "use strict";
 /* eslint-disable no-continue */
 /* eslint-disable no-unused-vars */
@@ -3941,342 +3941,6 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 }
 
 },{}],14:[function(require,module,exports){
-'use strict'
-
-// A linked list to keep track of recently-used-ness
-const Yallist = require('yallist')
-
-const MAX = Symbol('max')
-const LENGTH = Symbol('length')
-const LENGTH_CALCULATOR = Symbol('lengthCalculator')
-const ALLOW_STALE = Symbol('allowStale')
-const MAX_AGE = Symbol('maxAge')
-const DISPOSE = Symbol('dispose')
-const NO_DISPOSE_ON_SET = Symbol('noDisposeOnSet')
-const LRU_LIST = Symbol('lruList')
-const CACHE = Symbol('cache')
-const UPDATE_AGE_ON_GET = Symbol('updateAgeOnGet')
-
-const naiveLength = () => 1
-
-// lruList is a yallist where the head is the youngest
-// item, and the tail is the oldest.  the list contains the Hit
-// objects as the entries.
-// Each Hit object has a reference to its Yallist.Node.  This
-// never changes.
-//
-// cache is a Map (or PseudoMap) that matches the keys to
-// the Yallist.Node object.
-class LRUCache {
-  constructor (options) {
-    if (typeof options === 'number')
-      options = { max: options }
-
-    if (!options)
-      options = {}
-
-    if (options.max && (typeof options.max !== 'number' || options.max < 0))
-      throw new TypeError('max must be a non-negative number')
-    // Kind of weird to have a default max of Infinity, but oh well.
-    const max = this[MAX] = options.max || Infinity
-
-    const lc = options.length || naiveLength
-    this[LENGTH_CALCULATOR] = (typeof lc !== 'function') ? naiveLength : lc
-    this[ALLOW_STALE] = options.stale || false
-    if (options.maxAge && typeof options.maxAge !== 'number')
-      throw new TypeError('maxAge must be a number')
-    this[MAX_AGE] = options.maxAge || 0
-    this[DISPOSE] = options.dispose
-    this[NO_DISPOSE_ON_SET] = options.noDisposeOnSet || false
-    this[UPDATE_AGE_ON_GET] = options.updateAgeOnGet || false
-    this.reset()
-  }
-
-  // resize the cache when the max changes.
-  set max (mL) {
-    if (typeof mL !== 'number' || mL < 0)
-      throw new TypeError('max must be a non-negative number')
-
-    this[MAX] = mL || Infinity
-    trim(this)
-  }
-  get max () {
-    return this[MAX]
-  }
-
-  set allowStale (allowStale) {
-    this[ALLOW_STALE] = !!allowStale
-  }
-  get allowStale () {
-    return this[ALLOW_STALE]
-  }
-
-  set maxAge (mA) {
-    if (typeof mA !== 'number')
-      throw new TypeError('maxAge must be a non-negative number')
-
-    this[MAX_AGE] = mA
-    trim(this)
-  }
-  get maxAge () {
-    return this[MAX_AGE]
-  }
-
-  // resize the cache when the lengthCalculator changes.
-  set lengthCalculator (lC) {
-    if (typeof lC !== 'function')
-      lC = naiveLength
-
-    if (lC !== this[LENGTH_CALCULATOR]) {
-      this[LENGTH_CALCULATOR] = lC
-      this[LENGTH] = 0
-      this[LRU_LIST].forEach(hit => {
-        hit.length = this[LENGTH_CALCULATOR](hit.value, hit.key)
-        this[LENGTH] += hit.length
-      })
-    }
-    trim(this)
-  }
-  get lengthCalculator () { return this[LENGTH_CALCULATOR] }
-
-  get length () { return this[LENGTH] }
-  get itemCount () { return this[LRU_LIST].length }
-
-  rforEach (fn, thisp) {
-    thisp = thisp || this
-    for (let walker = this[LRU_LIST].tail; walker !== null;) {
-      const prev = walker.prev
-      forEachStep(this, fn, walker, thisp)
-      walker = prev
-    }
-  }
-
-  forEach (fn, thisp) {
-    thisp = thisp || this
-    for (let walker = this[LRU_LIST].head; walker !== null;) {
-      const next = walker.next
-      forEachStep(this, fn, walker, thisp)
-      walker = next
-    }
-  }
-
-  keys () {
-    return this[LRU_LIST].toArray().map(k => k.key)
-  }
-
-  values () {
-    return this[LRU_LIST].toArray().map(k => k.value)
-  }
-
-  reset () {
-    if (this[DISPOSE] &&
-        this[LRU_LIST] &&
-        this[LRU_LIST].length) {
-      this[LRU_LIST].forEach(hit => this[DISPOSE](hit.key, hit.value))
-    }
-
-    this[CACHE] = new Map() // hash of items by key
-    this[LRU_LIST] = new Yallist() // list of items in order of use recency
-    this[LENGTH] = 0 // length of items in the list
-  }
-
-  dump () {
-    return this[LRU_LIST].map(hit =>
-      isStale(this, hit) ? false : {
-        k: hit.key,
-        v: hit.value,
-        e: hit.now + (hit.maxAge || 0)
-      }).toArray().filter(h => h)
-  }
-
-  dumpLru () {
-    return this[LRU_LIST]
-  }
-
-  set (key, value, maxAge) {
-    maxAge = maxAge || this[MAX_AGE]
-
-    if (maxAge && typeof maxAge !== 'number')
-      throw new TypeError('maxAge must be a number')
-
-    const now = maxAge ? Date.now() : 0
-    const len = this[LENGTH_CALCULATOR](value, key)
-
-    if (this[CACHE].has(key)) {
-      if (len > this[MAX]) {
-        del(this, this[CACHE].get(key))
-        return false
-      }
-
-      const node = this[CACHE].get(key)
-      const item = node.value
-
-      // dispose of the old one before overwriting
-      // split out into 2 ifs for better coverage tracking
-      if (this[DISPOSE]) {
-        if (!this[NO_DISPOSE_ON_SET])
-          this[DISPOSE](key, item.value)
-      }
-
-      item.now = now
-      item.maxAge = maxAge
-      item.value = value
-      this[LENGTH] += len - item.length
-      item.length = len
-      this.get(key)
-      trim(this)
-      return true
-    }
-
-    const hit = new Entry(key, value, len, now, maxAge)
-
-    // oversized objects fall out of cache automatically.
-    if (hit.length > this[MAX]) {
-      if (this[DISPOSE])
-        this[DISPOSE](key, value)
-
-      return false
-    }
-
-    this[LENGTH] += hit.length
-    this[LRU_LIST].unshift(hit)
-    this[CACHE].set(key, this[LRU_LIST].head)
-    trim(this)
-    return true
-  }
-
-  has (key) {
-    if (!this[CACHE].has(key)) return false
-    const hit = this[CACHE].get(key).value
-    return !isStale(this, hit)
-  }
-
-  get (key) {
-    return get(this, key, true)
-  }
-
-  peek (key) {
-    return get(this, key, false)
-  }
-
-  pop () {
-    const node = this[LRU_LIST].tail
-    if (!node)
-      return null
-
-    del(this, node)
-    return node.value
-  }
-
-  del (key) {
-    del(this, this[CACHE].get(key))
-  }
-
-  load (arr) {
-    // reset the cache
-    this.reset()
-
-    const now = Date.now()
-    // A previous serialized cache has the most recent items first
-    for (let l = arr.length - 1; l >= 0; l--) {
-      const hit = arr[l]
-      const expiresAt = hit.e || 0
-      if (expiresAt === 0)
-        // the item was created without expiration in a non aged cache
-        this.set(hit.k, hit.v)
-      else {
-        const maxAge = expiresAt - now
-        // dont add already expired items
-        if (maxAge > 0) {
-          this.set(hit.k, hit.v, maxAge)
-        }
-      }
-    }
-  }
-
-  prune () {
-    this[CACHE].forEach((value, key) => get(this, key, false))
-  }
-}
-
-const get = (self, key, doUse) => {
-  const node = self[CACHE].get(key)
-  if (node) {
-    const hit = node.value
-    if (isStale(self, hit)) {
-      del(self, node)
-      if (!self[ALLOW_STALE])
-        return undefined
-    } else {
-      if (doUse) {
-        if (self[UPDATE_AGE_ON_GET])
-          node.value.now = Date.now()
-        self[LRU_LIST].unshiftNode(node)
-      }
-    }
-    return hit.value
-  }
-}
-
-const isStale = (self, hit) => {
-  if (!hit || (!hit.maxAge && !self[MAX_AGE]))
-    return false
-
-  const diff = Date.now() - hit.now
-  return hit.maxAge ? diff > hit.maxAge
-    : self[MAX_AGE] && (diff > self[MAX_AGE])
-}
-
-const trim = self => {
-  if (self[LENGTH] > self[MAX]) {
-    for (let walker = self[LRU_LIST].tail;
-      self[LENGTH] > self[MAX] && walker !== null;) {
-      // We know that we're about to delete this one, and also
-      // what the next least recently used key will be, so just
-      // go ahead and set it now.
-      const prev = walker.prev
-      del(self, walker)
-      walker = prev
-    }
-  }
-}
-
-const del = (self, node) => {
-  if (node) {
-    const hit = node.value
-    if (self[DISPOSE])
-      self[DISPOSE](hit.key, hit.value)
-
-    self[LENGTH] -= hit.length
-    self[CACHE].delete(hit.key)
-    self[LRU_LIST].removeNode(node)
-  }
-}
-
-class Entry {
-  constructor (key, value, length, now, maxAge) {
-    this.key = key
-    this.value = value
-    this.length = length
-    this.now = now
-    this.maxAge = maxAge || 0
-  }
-}
-
-const forEachStep = (self, fn, node, thisp) => {
-  let hit = node.value
-  if (isStale(self, hit)) {
-    del(self, node)
-    if (!self[ALLOW_STALE])
-      hit = undefined
-  }
-  if (hit)
-    fn.call(thisp, hit.value, hit.key, self)
-}
-
-module.exports = LRUCache
-
-},{"yallist":61}],15:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -4462,7 +4126,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],16:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 const ANY = Symbol('SemVer ANY')
 // hoisted class for cyclic dependency
 class Comparator {
@@ -4599,7 +4263,7 @@ const debug = require('../internal/debug')
 const SemVer = require('./semver')
 const Range = require('./range')
 
-},{"../functions/cmp":20,"../internal/debug":45,"../internal/parse-options":47,"../internal/re":48,"./range":17,"./semver":18}],17:[function(require,module,exports){
+},{"../functions/cmp":19,"../internal/debug":44,"../internal/parse-options":46,"../internal/re":47,"./range":16,"./semver":17}],16:[function(require,module,exports){
 // hoisted class for cyclic dependency
 class Range {
   constructor (range, options) {
@@ -5111,7 +4775,7 @@ const testSet = (set, version, options) => {
   return true
 }
 
-},{"../internal/debug":45,"../internal/parse-options":47,"../internal/re":48,"./comparator":16,"./semver":18,"lru-cache":14}],18:[function(require,module,exports){
+},{"../internal/debug":44,"../internal/parse-options":46,"../internal/re":47,"./comparator":15,"./semver":17,"lru-cache":48}],17:[function(require,module,exports){
 const debug = require('../internal/debug')
 const { MAX_LENGTH, MAX_SAFE_INTEGER } = require('../internal/constants')
 const { re, t } = require('../internal/re')
@@ -5400,7 +5064,7 @@ class SemVer {
 
 module.exports = SemVer
 
-},{"../internal/constants":44,"../internal/debug":45,"../internal/identifiers":46,"../internal/parse-options":47,"../internal/re":48}],19:[function(require,module,exports){
+},{"../internal/constants":43,"../internal/debug":44,"../internal/identifiers":45,"../internal/parse-options":46,"../internal/re":47}],18:[function(require,module,exports){
 const parse = require('./parse')
 const clean = (version, options) => {
   const s = parse(version.trim().replace(/^[=v]+/, ''), options)
@@ -5408,7 +5072,7 @@ const clean = (version, options) => {
 }
 module.exports = clean
 
-},{"./parse":35}],20:[function(require,module,exports){
+},{"./parse":34}],19:[function(require,module,exports){
 const eq = require('./eq')
 const neq = require('./neq')
 const gt = require('./gt')
@@ -5458,7 +5122,7 @@ const cmp = (a, op, b, loose) => {
 }
 module.exports = cmp
 
-},{"./eq":26,"./gt":27,"./gte":28,"./lt":30,"./lte":31,"./neq":34}],21:[function(require,module,exports){
+},{"./eq":25,"./gt":26,"./gte":27,"./lt":29,"./lte":30,"./neq":33}],20:[function(require,module,exports){
 const SemVer = require('../classes/semver')
 const parse = require('./parse')
 const {re, t} = require('../internal/re')
@@ -5511,7 +5175,7 @@ const coerce = (version, options) => {
 }
 module.exports = coerce
 
-},{"../classes/semver":18,"../internal/re":48,"./parse":35}],22:[function(require,module,exports){
+},{"../classes/semver":17,"../internal/re":47,"./parse":34}],21:[function(require,module,exports){
 const SemVer = require('../classes/semver')
 const compareBuild = (a, b, loose) => {
   const versionA = new SemVer(a, loose)
@@ -5520,19 +5184,19 @@ const compareBuild = (a, b, loose) => {
 }
 module.exports = compareBuild
 
-},{"../classes/semver":18}],23:[function(require,module,exports){
+},{"../classes/semver":17}],22:[function(require,module,exports){
 const compare = require('./compare')
 const compareLoose = (a, b) => compare(a, b, true)
 module.exports = compareLoose
 
-},{"./compare":24}],24:[function(require,module,exports){
+},{"./compare":23}],23:[function(require,module,exports){
 const SemVer = require('../classes/semver')
 const compare = (a, b, loose) =>
   new SemVer(a, loose).compare(new SemVer(b, loose))
 
 module.exports = compare
 
-},{"../classes/semver":18}],25:[function(require,module,exports){
+},{"../classes/semver":17}],24:[function(require,module,exports){
 const parse = require('./parse')
 const eq = require('./eq')
 
@@ -5557,22 +5221,22 @@ const diff = (version1, version2) => {
 }
 module.exports = diff
 
-},{"./eq":26,"./parse":35}],26:[function(require,module,exports){
+},{"./eq":25,"./parse":34}],25:[function(require,module,exports){
 const compare = require('./compare')
 const eq = (a, b, loose) => compare(a, b, loose) === 0
 module.exports = eq
 
-},{"./compare":24}],27:[function(require,module,exports){
+},{"./compare":23}],26:[function(require,module,exports){
 const compare = require('./compare')
 const gt = (a, b, loose) => compare(a, b, loose) > 0
 module.exports = gt
 
-},{"./compare":24}],28:[function(require,module,exports){
+},{"./compare":23}],27:[function(require,module,exports){
 const compare = require('./compare')
 const gte = (a, b, loose) => compare(a, b, loose) >= 0
 module.exports = gte
 
-},{"./compare":24}],29:[function(require,module,exports){
+},{"./compare":23}],28:[function(require,module,exports){
 const SemVer = require('../classes/semver')
 
 const inc = (version, release, options, identifier) => {
@@ -5589,32 +5253,32 @@ const inc = (version, release, options, identifier) => {
 }
 module.exports = inc
 
-},{"../classes/semver":18}],30:[function(require,module,exports){
+},{"../classes/semver":17}],29:[function(require,module,exports){
 const compare = require('./compare')
 const lt = (a, b, loose) => compare(a, b, loose) < 0
 module.exports = lt
 
-},{"./compare":24}],31:[function(require,module,exports){
+},{"./compare":23}],30:[function(require,module,exports){
 const compare = require('./compare')
 const lte = (a, b, loose) => compare(a, b, loose) <= 0
 module.exports = lte
 
-},{"./compare":24}],32:[function(require,module,exports){
+},{"./compare":23}],31:[function(require,module,exports){
 const SemVer = require('../classes/semver')
 const major = (a, loose) => new SemVer(a, loose).major
 module.exports = major
 
-},{"../classes/semver":18}],33:[function(require,module,exports){
+},{"../classes/semver":17}],32:[function(require,module,exports){
 const SemVer = require('../classes/semver')
 const minor = (a, loose) => new SemVer(a, loose).minor
 module.exports = minor
 
-},{"../classes/semver":18}],34:[function(require,module,exports){
+},{"../classes/semver":17}],33:[function(require,module,exports){
 const compare = require('./compare')
 const neq = (a, b, loose) => compare(a, b, loose) !== 0
 module.exports = neq
 
-},{"./compare":24}],35:[function(require,module,exports){
+},{"./compare":23}],34:[function(require,module,exports){
 const {MAX_LENGTH} = require('../internal/constants')
 const { re, t } = require('../internal/re')
 const SemVer = require('../classes/semver')
@@ -5649,12 +5313,12 @@ const parse = (version, options) => {
 
 module.exports = parse
 
-},{"../classes/semver":18,"../internal/constants":44,"../internal/parse-options":47,"../internal/re":48}],36:[function(require,module,exports){
+},{"../classes/semver":17,"../internal/constants":43,"../internal/parse-options":46,"../internal/re":47}],35:[function(require,module,exports){
 const SemVer = require('../classes/semver')
 const patch = (a, loose) => new SemVer(a, loose).patch
 module.exports = patch
 
-},{"../classes/semver":18}],37:[function(require,module,exports){
+},{"../classes/semver":17}],36:[function(require,module,exports){
 const parse = require('./parse')
 const prerelease = (version, options) => {
   const parsed = parse(version, options)
@@ -5662,17 +5326,17 @@ const prerelease = (version, options) => {
 }
 module.exports = prerelease
 
-},{"./parse":35}],38:[function(require,module,exports){
+},{"./parse":34}],37:[function(require,module,exports){
 const compare = require('./compare')
 const rcompare = (a, b, loose) => compare(b, a, loose)
 module.exports = rcompare
 
-},{"./compare":24}],39:[function(require,module,exports){
+},{"./compare":23}],38:[function(require,module,exports){
 const compareBuild = require('./compare-build')
 const rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose))
 module.exports = rsort
 
-},{"./compare-build":22}],40:[function(require,module,exports){
+},{"./compare-build":21}],39:[function(require,module,exports){
 const Range = require('../classes/range')
 const satisfies = (version, range, options) => {
   try {
@@ -5684,12 +5348,12 @@ const satisfies = (version, range, options) => {
 }
 module.exports = satisfies
 
-},{"../classes/range":17}],41:[function(require,module,exports){
+},{"../classes/range":16}],40:[function(require,module,exports){
 const compareBuild = require('./compare-build')
 const sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose))
 module.exports = sort
 
-},{"./compare-build":22}],42:[function(require,module,exports){
+},{"./compare-build":21}],41:[function(require,module,exports){
 const parse = require('./parse')
 const valid = (version, options) => {
   const v = parse(version, options)
@@ -5697,7 +5361,7 @@ const valid = (version, options) => {
 }
 module.exports = valid
 
-},{"./parse":35}],43:[function(require,module,exports){
+},{"./parse":34}],42:[function(require,module,exports){
 // just pre-load all the stuff that index.js lazily exports
 const internalRe = require('./internal/re')
 module.exports = {
@@ -5747,7 +5411,7 @@ module.exports = {
   subset: require('./ranges/subset'),
 }
 
-},{"./classes/comparator":16,"./classes/range":17,"./classes/semver":18,"./functions/clean":19,"./functions/cmp":20,"./functions/coerce":21,"./functions/compare":24,"./functions/compare-build":22,"./functions/compare-loose":23,"./functions/diff":25,"./functions/eq":26,"./functions/gt":27,"./functions/gte":28,"./functions/inc":29,"./functions/lt":30,"./functions/lte":31,"./functions/major":32,"./functions/minor":33,"./functions/neq":34,"./functions/parse":35,"./functions/patch":36,"./functions/prerelease":37,"./functions/rcompare":38,"./functions/rsort":39,"./functions/satisfies":40,"./functions/sort":41,"./functions/valid":42,"./internal/constants":44,"./internal/identifiers":46,"./internal/re":48,"./ranges/gtr":49,"./ranges/intersects":50,"./ranges/ltr":51,"./ranges/max-satisfying":52,"./ranges/min-satisfying":53,"./ranges/min-version":54,"./ranges/outside":55,"./ranges/simplify":56,"./ranges/subset":57,"./ranges/to-comparators":58,"./ranges/valid":59}],44:[function(require,module,exports){
+},{"./classes/comparator":15,"./classes/range":16,"./classes/semver":17,"./functions/clean":18,"./functions/cmp":19,"./functions/coerce":20,"./functions/compare":23,"./functions/compare-build":21,"./functions/compare-loose":22,"./functions/diff":24,"./functions/eq":25,"./functions/gt":26,"./functions/gte":27,"./functions/inc":28,"./functions/lt":29,"./functions/lte":30,"./functions/major":31,"./functions/minor":32,"./functions/neq":33,"./functions/parse":34,"./functions/patch":35,"./functions/prerelease":36,"./functions/rcompare":37,"./functions/rsort":38,"./functions/satisfies":39,"./functions/sort":40,"./functions/valid":41,"./internal/constants":43,"./internal/identifiers":45,"./internal/re":47,"./ranges/gtr":49,"./ranges/intersects":50,"./ranges/ltr":51,"./ranges/max-satisfying":52,"./ranges/min-satisfying":53,"./ranges/min-version":54,"./ranges/outside":55,"./ranges/simplify":56,"./ranges/subset":57,"./ranges/to-comparators":58,"./ranges/valid":59}],43:[function(require,module,exports){
 // Note: this is the semver.org version of the spec that it implements
 // Not necessarily the package version of this code.
 const SEMVER_SPEC_VERSION = '2.0.0'
@@ -5766,7 +5430,7 @@ module.exports = {
   MAX_SAFE_COMPONENT_LENGTH
 }
 
-},{}],45:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 (function (process){(function (){
 const debug = (
   typeof process === 'object' &&
@@ -5779,7 +5443,7 @@ const debug = (
 module.exports = debug
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":15}],46:[function(require,module,exports){
+},{"_process":14}],45:[function(require,module,exports){
 const numeric = /^[0-9]+$/
 const compareIdentifiers = (a, b) => {
   const anum = numeric.test(a)
@@ -5804,7 +5468,7 @@ module.exports = {
   rcompareIdentifiers
 }
 
-},{}],47:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 // parse out just the options we care about so we always get a consistent
 // obj with keys in a consistent order.
 const opts = ['includePrerelease', 'loose', 'rtl']
@@ -5817,7 +5481,7 @@ const parseOptions = options =>
   }, {})
 module.exports = parseOptions
 
-},{}],48:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 const { MAX_SAFE_COMPONENT_LENGTH } = require('./constants')
 const debug = require('./debug')
 exports = module.exports = {}
@@ -6001,7 +5665,343 @@ createToken('STAR', '(<|>)?=?\\s*\\*')
 createToken('GTE0', '^\\s*>=\\s*0\.0\.0\\s*$')
 createToken('GTE0PRE', '^\\s*>=\\s*0\.0\.0-0\\s*$')
 
-},{"./constants":44,"./debug":45}],49:[function(require,module,exports){
+},{"./constants":43,"./debug":44}],48:[function(require,module,exports){
+'use strict'
+
+// A linked list to keep track of recently-used-ness
+const Yallist = require('yallist')
+
+const MAX = Symbol('max')
+const LENGTH = Symbol('length')
+const LENGTH_CALCULATOR = Symbol('lengthCalculator')
+const ALLOW_STALE = Symbol('allowStale')
+const MAX_AGE = Symbol('maxAge')
+const DISPOSE = Symbol('dispose')
+const NO_DISPOSE_ON_SET = Symbol('noDisposeOnSet')
+const LRU_LIST = Symbol('lruList')
+const CACHE = Symbol('cache')
+const UPDATE_AGE_ON_GET = Symbol('updateAgeOnGet')
+
+const naiveLength = () => 1
+
+// lruList is a yallist where the head is the youngest
+// item, and the tail is the oldest.  the list contains the Hit
+// objects as the entries.
+// Each Hit object has a reference to its Yallist.Node.  This
+// never changes.
+//
+// cache is a Map (or PseudoMap) that matches the keys to
+// the Yallist.Node object.
+class LRUCache {
+  constructor (options) {
+    if (typeof options === 'number')
+      options = { max: options }
+
+    if (!options)
+      options = {}
+
+    if (options.max && (typeof options.max !== 'number' || options.max < 0))
+      throw new TypeError('max must be a non-negative number')
+    // Kind of weird to have a default max of Infinity, but oh well.
+    const max = this[MAX] = options.max || Infinity
+
+    const lc = options.length || naiveLength
+    this[LENGTH_CALCULATOR] = (typeof lc !== 'function') ? naiveLength : lc
+    this[ALLOW_STALE] = options.stale || false
+    if (options.maxAge && typeof options.maxAge !== 'number')
+      throw new TypeError('maxAge must be a number')
+    this[MAX_AGE] = options.maxAge || 0
+    this[DISPOSE] = options.dispose
+    this[NO_DISPOSE_ON_SET] = options.noDisposeOnSet || false
+    this[UPDATE_AGE_ON_GET] = options.updateAgeOnGet || false
+    this.reset()
+  }
+
+  // resize the cache when the max changes.
+  set max (mL) {
+    if (typeof mL !== 'number' || mL < 0)
+      throw new TypeError('max must be a non-negative number')
+
+    this[MAX] = mL || Infinity
+    trim(this)
+  }
+  get max () {
+    return this[MAX]
+  }
+
+  set allowStale (allowStale) {
+    this[ALLOW_STALE] = !!allowStale
+  }
+  get allowStale () {
+    return this[ALLOW_STALE]
+  }
+
+  set maxAge (mA) {
+    if (typeof mA !== 'number')
+      throw new TypeError('maxAge must be a non-negative number')
+
+    this[MAX_AGE] = mA
+    trim(this)
+  }
+  get maxAge () {
+    return this[MAX_AGE]
+  }
+
+  // resize the cache when the lengthCalculator changes.
+  set lengthCalculator (lC) {
+    if (typeof lC !== 'function')
+      lC = naiveLength
+
+    if (lC !== this[LENGTH_CALCULATOR]) {
+      this[LENGTH_CALCULATOR] = lC
+      this[LENGTH] = 0
+      this[LRU_LIST].forEach(hit => {
+        hit.length = this[LENGTH_CALCULATOR](hit.value, hit.key)
+        this[LENGTH] += hit.length
+      })
+    }
+    trim(this)
+  }
+  get lengthCalculator () { return this[LENGTH_CALCULATOR] }
+
+  get length () { return this[LENGTH] }
+  get itemCount () { return this[LRU_LIST].length }
+
+  rforEach (fn, thisp) {
+    thisp = thisp || this
+    for (let walker = this[LRU_LIST].tail; walker !== null;) {
+      const prev = walker.prev
+      forEachStep(this, fn, walker, thisp)
+      walker = prev
+    }
+  }
+
+  forEach (fn, thisp) {
+    thisp = thisp || this
+    for (let walker = this[LRU_LIST].head; walker !== null;) {
+      const next = walker.next
+      forEachStep(this, fn, walker, thisp)
+      walker = next
+    }
+  }
+
+  keys () {
+    return this[LRU_LIST].toArray().map(k => k.key)
+  }
+
+  values () {
+    return this[LRU_LIST].toArray().map(k => k.value)
+  }
+
+  reset () {
+    if (this[DISPOSE] &&
+        this[LRU_LIST] &&
+        this[LRU_LIST].length) {
+      this[LRU_LIST].forEach(hit => this[DISPOSE](hit.key, hit.value))
+    }
+
+    this[CACHE] = new Map() // hash of items by key
+    this[LRU_LIST] = new Yallist() // list of items in order of use recency
+    this[LENGTH] = 0 // length of items in the list
+  }
+
+  dump () {
+    return this[LRU_LIST].map(hit =>
+      isStale(this, hit) ? false : {
+        k: hit.key,
+        v: hit.value,
+        e: hit.now + (hit.maxAge || 0)
+      }).toArray().filter(h => h)
+  }
+
+  dumpLru () {
+    return this[LRU_LIST]
+  }
+
+  set (key, value, maxAge) {
+    maxAge = maxAge || this[MAX_AGE]
+
+    if (maxAge && typeof maxAge !== 'number')
+      throw new TypeError('maxAge must be a number')
+
+    const now = maxAge ? Date.now() : 0
+    const len = this[LENGTH_CALCULATOR](value, key)
+
+    if (this[CACHE].has(key)) {
+      if (len > this[MAX]) {
+        del(this, this[CACHE].get(key))
+        return false
+      }
+
+      const node = this[CACHE].get(key)
+      const item = node.value
+
+      // dispose of the old one before overwriting
+      // split out into 2 ifs for better coverage tracking
+      if (this[DISPOSE]) {
+        if (!this[NO_DISPOSE_ON_SET])
+          this[DISPOSE](key, item.value)
+      }
+
+      item.now = now
+      item.maxAge = maxAge
+      item.value = value
+      this[LENGTH] += len - item.length
+      item.length = len
+      this.get(key)
+      trim(this)
+      return true
+    }
+
+    const hit = new Entry(key, value, len, now, maxAge)
+
+    // oversized objects fall out of cache automatically.
+    if (hit.length > this[MAX]) {
+      if (this[DISPOSE])
+        this[DISPOSE](key, value)
+
+      return false
+    }
+
+    this[LENGTH] += hit.length
+    this[LRU_LIST].unshift(hit)
+    this[CACHE].set(key, this[LRU_LIST].head)
+    trim(this)
+    return true
+  }
+
+  has (key) {
+    if (!this[CACHE].has(key)) return false
+    const hit = this[CACHE].get(key).value
+    return !isStale(this, hit)
+  }
+
+  get (key) {
+    return get(this, key, true)
+  }
+
+  peek (key) {
+    return get(this, key, false)
+  }
+
+  pop () {
+    const node = this[LRU_LIST].tail
+    if (!node)
+      return null
+
+    del(this, node)
+    return node.value
+  }
+
+  del (key) {
+    del(this, this[CACHE].get(key))
+  }
+
+  load (arr) {
+    // reset the cache
+    this.reset()
+
+    const now = Date.now()
+    // A previous serialized cache has the most recent items first
+    for (let l = arr.length - 1; l >= 0; l--) {
+      const hit = arr[l]
+      const expiresAt = hit.e || 0
+      if (expiresAt === 0)
+        // the item was created without expiration in a non aged cache
+        this.set(hit.k, hit.v)
+      else {
+        const maxAge = expiresAt - now
+        // dont add already expired items
+        if (maxAge > 0) {
+          this.set(hit.k, hit.v, maxAge)
+        }
+      }
+    }
+  }
+
+  prune () {
+    this[CACHE].forEach((value, key) => get(this, key, false))
+  }
+}
+
+const get = (self, key, doUse) => {
+  const node = self[CACHE].get(key)
+  if (node) {
+    const hit = node.value
+    if (isStale(self, hit)) {
+      del(self, node)
+      if (!self[ALLOW_STALE])
+        return undefined
+    } else {
+      if (doUse) {
+        if (self[UPDATE_AGE_ON_GET])
+          node.value.now = Date.now()
+        self[LRU_LIST].unshiftNode(node)
+      }
+    }
+    return hit.value
+  }
+}
+
+const isStale = (self, hit) => {
+  if (!hit || (!hit.maxAge && !self[MAX_AGE]))
+    return false
+
+  const diff = Date.now() - hit.now
+  return hit.maxAge ? diff > hit.maxAge
+    : self[MAX_AGE] && (diff > self[MAX_AGE])
+}
+
+const trim = self => {
+  if (self[LENGTH] > self[MAX]) {
+    for (let walker = self[LRU_LIST].tail;
+      self[LENGTH] > self[MAX] && walker !== null;) {
+      // We know that we're about to delete this one, and also
+      // what the next least recently used key will be, so just
+      // go ahead and set it now.
+      const prev = walker.prev
+      del(self, walker)
+      walker = prev
+    }
+  }
+}
+
+const del = (self, node) => {
+  if (node) {
+    const hit = node.value
+    if (self[DISPOSE])
+      self[DISPOSE](hit.key, hit.value)
+
+    self[LENGTH] -= hit.length
+    self[CACHE].delete(hit.key)
+    self[LRU_LIST].removeNode(node)
+  }
+}
+
+class Entry {
+  constructor (key, value, length, now, maxAge) {
+    this.key = key
+    this.value = value
+    this.length = length
+    this.now = now
+    this.maxAge = maxAge || 0
+  }
+}
+
+const forEachStep = (self, fn, node, thisp) => {
+  let hit = node.value
+  if (isStale(self, hit)) {
+    del(self, node)
+    if (!self[ALLOW_STALE])
+      hit = undefined
+  }
+  if (hit)
+    fn.call(thisp, hit.value, hit.key, self)
+}
+
+module.exports = LRUCache
+
+},{"yallist":61}],49:[function(require,module,exports){
 // Determine if version is greater than all the versions possible in the range.
 const outside = require('./outside')
 const gtr = (version, range, options) => outside(version, range, '>', options)
@@ -6016,7 +6016,7 @@ const intersects = (r1, r2, options) => {
 }
 module.exports = intersects
 
-},{"../classes/range":17}],51:[function(require,module,exports){
+},{"../classes/range":16}],51:[function(require,module,exports){
 const outside = require('./outside')
 // Determine if version is less than all the versions possible in the range
 const ltr = (version, range, options) => outside(version, range, '<', options)
@@ -6049,7 +6049,7 @@ const maxSatisfying = (versions, range, options) => {
 }
 module.exports = maxSatisfying
 
-},{"../classes/range":17,"../classes/semver":18}],53:[function(require,module,exports){
+},{"../classes/range":16,"../classes/semver":17}],53:[function(require,module,exports){
 const SemVer = require('../classes/semver')
 const Range = require('../classes/range')
 const minSatisfying = (versions, range, options) => {
@@ -6075,7 +6075,7 @@ const minSatisfying = (versions, range, options) => {
 }
 module.exports = minSatisfying
 
-},{"../classes/range":17,"../classes/semver":18}],54:[function(require,module,exports){
+},{"../classes/range":16,"../classes/semver":17}],54:[function(require,module,exports){
 const SemVer = require('../classes/semver')
 const Range = require('../classes/range')
 const gt = require('../functions/gt')
@@ -6137,7 +6137,7 @@ const minVersion = (range, loose) => {
 }
 module.exports = minVersion
 
-},{"../classes/range":17,"../classes/semver":18,"../functions/gt":27}],55:[function(require,module,exports){
+},{"../classes/range":16,"../classes/semver":17,"../functions/gt":26}],55:[function(require,module,exports){
 const SemVer = require('../classes/semver')
 const Comparator = require('../classes/comparator')
 const {ANY} = Comparator
@@ -6219,7 +6219,7 @@ const outside = (version, range, hilo, options) => {
 
 module.exports = outside
 
-},{"../classes/comparator":16,"../classes/range":17,"../classes/semver":18,"../functions/gt":27,"../functions/gte":28,"../functions/lt":30,"../functions/lte":31,"../functions/satisfies":40}],56:[function(require,module,exports){
+},{"../classes/comparator":15,"../classes/range":16,"../classes/semver":17,"../functions/gt":26,"../functions/gte":27,"../functions/lt":29,"../functions/lte":30,"../functions/satisfies":39}],56:[function(require,module,exports){
 // given a set of versions and a range, create a "simplified" range
 // that includes the same versions that the original range does
 // If the original range is shorter than the simplified one, return that.
@@ -6265,7 +6265,7 @@ module.exports = (versions, range, options) => {
   return simplified.length < original.length ? simplified : range
 }
 
-},{"../functions/compare.js":24,"../functions/satisfies.js":40}],57:[function(require,module,exports){
+},{"../functions/compare.js":23,"../functions/satisfies.js":39}],57:[function(require,module,exports){
 const Range = require('../classes/range.js')
 const Comparator = require('../classes/comparator.js')
 const { ANY } = Comparator
@@ -6489,7 +6489,7 @@ const lowerLT = (a, b, options) => {
 
 module.exports = subset
 
-},{"../classes/comparator.js":16,"../classes/range.js":17,"../functions/compare.js":24,"../functions/satisfies.js":40}],58:[function(require,module,exports){
+},{"../classes/comparator.js":15,"../classes/range.js":16,"../functions/compare.js":23,"../functions/satisfies.js":39}],58:[function(require,module,exports){
 const Range = require('../classes/range')
 
 // Mostly just for testing and legacy API reasons
@@ -6499,7 +6499,7 @@ const toComparators = (range, options) =>
 
 module.exports = toComparators
 
-},{"../classes/range":17}],59:[function(require,module,exports){
+},{"../classes/range":16}],59:[function(require,module,exports){
 const Range = require('../classes/range')
 const validRange = (range, options) => {
   try {
@@ -6512,7 +6512,7 @@ const validRange = (range, options) => {
 }
 module.exports = validRange
 
-},{"../classes/range":17}],60:[function(require,module,exports){
+},{"../classes/range":16}],60:[function(require,module,exports){
 'use strict'
 module.exports = function (Yallist) {
   Yallist.prototype[Symbol.iterator] = function* () {
