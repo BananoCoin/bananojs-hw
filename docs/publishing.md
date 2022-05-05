@@ -6,7 +6,7 @@
 
     npm run preflight;
 
-    npm --no-git-tag-version version patch;npm run build;
+    npm --no-git-tag-version version patch;npm run browserify;
 
 ### good to commit here, so published code is same as NPM code.
 
