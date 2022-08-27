@@ -21,6 +21,12 @@ window.checkLedger = async () => {
   }
 };
 
+const clearAllPasswordInfo = () => {
+  clearAllSeedPasswordInfo();
+  clearAllMnemonicPasswordInfo();
+  clearAllSeedArrayPasswordInfo();
+}
+
 const clearAllSeedPasswordInfo = () => {
   clearNewSeedPasswordInfo();
   document.getElementById('oldSeedPassword').value = '';
