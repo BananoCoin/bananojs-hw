@@ -73,10 +73,40 @@
               <button onclick="checkNewMnemonic();return false;">Check New Mnemonic Account and Pending</button>
             </form>
           </div>
+
+          <div id="checkOldSeedArray" class="border_black display_none">
+            <h2>Reuse Stored Seed</h2>
+            Password for Stored Seed (required)<br />
+            <form>
+              <input id="oldSeedArrayPassword" class="monospace small bg_white" type="password" size="66" max_length="64" value="" defaultValue="password" autocomplete="current-password" /><br />
+              <button onclick="checkOldSeedArray();return false;">Check Old Seed Array Account and Pending</button>
+            </form>
+          </div>
+          <div id="clearOldSeedArray" class="border_black display_none">
+            <form>
+              <button onclick="clearOldSeedArray();return false;">Clear Old Seed Array (confirmation required)</button>
+            </form>
+          </div>
+          <div id="checkNewSeedArray" class="border_black display_none">
+            <h2>Store New Seed Array</h2>
+            Seed Array (required)<br />
+            <form>
+              <input id="fakeUsername" type="text" class="border_black display_none" autocomplete="username" />
+              <textarea id="newSeedArray" class="monospace small bg_white" type="text" cols="68" rows="8" value="" defaultValue="seed array" autocomplete="off"></textarea>
+              <button onclick="newRandomSeedArray();return false;">Random Seed Array</button>
+              <br />
+              Password for Storing Seed Array (optional)<br />
+              <input id="newSeedArrayPassword" class="monospace small bg_white" type="password" size="66" max_length="64" value="" defaultValue="password" autocomplete="new-password" /><br />
+              <button onclick="checkNewSeedArray();return false;">Check New Seed Array Account and Pending</button>
+            </form>
+          </div>
           <div id="accountData" class="border_black display_none">
             <h2>Account</h2>
             <div id="accountInfo" class="break_all"></div>
             <h2>Withdraw</h2>
+            <label for="accountDataArray">Choose which account to withdraw from</label><br />
+            <select name="accountDataArray" id="accountDataArray">
+            </select>
             <h3>Withdraw To Account</h3>
             <input id="withdrawAccount" class="monospace small bg_white" type="text" size="66" max_length="64" value="" defaultValue="To Account" />
             <h3>Withdraw Amount (Bananos)</h3>

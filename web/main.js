@@ -2,8 +2,10 @@ const MAX_PENDING = 10;
 
 const ACCOUNT_INDEX = 0;
 
-let accountSigner = undefined;
-let accountData = undefined;
+const RAND_SEED_ARRAY_LENGTH = 3;
+
+let accountSignerArray = [];
+let accountDataArray = [];
 let ledgerInUse = false;
 const config = window.bananocoinBananojsHw.bananoConfig;
 
@@ -19,19 +21,39 @@ window.checkLedger = async () => {
   }
 };
 
-const clearAllPasswordInfo = () => {
-  clearNewPasswordInfo();
+const clearAllSeedPasswordInfo = () => {
+  clearNewSeedPasswordInfo();
   document.getElementById('oldSeedPassword').value = '';
 };
 
-const clearNewPasswordInfo = () => {
+const clearNewSeedPasswordInfo = () => {
   document.getElementById('newSeed').value = '';
   document.getElementById('newSeedPassword').value = '';
 };
 
+const clearAllMnemonicPasswordInfo = () => {
+  clearNewMnemonicPasswordInfo();
+  document.getElementById('oldMnemonicPassword').value = '';
+};
+
+const clearNewMnemonicPasswordInfo = () => {
+  document.getElementById('newMnemonic').value = '';
+  document.getElementById('newMnemonicPassword').value = '';
+};
+
+const clearAllSeedArrayPasswordInfo = () => {
+  clearNewSeedArrayPasswordInfo();
+  document.getElementById('oldSeedArrayPassword').value = '';
+};
+
+const clearNewSeedArrayPasswordInfo = () => {
+  document.getElementById('newSeedArray').value = '';
+  document.getElementById('newSeedArrayPassword').value = '';
+};
+
 const clearAccountInfo = async () => {
-  accountSigner = undefined;
-  accountData = undefined;
+  accountSignerArray = [];
+  accountDataArray = [];
   document.getElementById('accountInfo').innerText = '';
   document.getElementById('withdrawAmount').value = '';
   document.getElementById('withdrawAccount').value = '';
@@ -40,93 +62,109 @@ const clearAccountInfo = async () => {
 
 const getAccountInfo = async () => {
   window.bananocoinBananojs.setBananodeApiUrl(config.bananodeUrl);
+  const accountDataArrayElt = document.getElementById('accountDataArray');
   const accountInfoElt = document.getElementById('accountInfo');
-  const account = accountData.account;
-  let innerText = `${account}\n`;
-  const accountInfo = await window.bananocoinBananojs.getAccountInfo(
-      account,
-      true,
-  );
-  // console.log('getAccountInfo', 'accountInfo', accountInfo);
-  if (accountInfo.error !== undefined) {
-    innerText += `${accountInfo.error}\n`;
-  } else {
-    const balanceParts = await window.bananocoinBananojs.getBananoPartsFromRaw(
-        accountInfo.balance,
+  let innerText = '';
+  let accountDataArrayInnerHtml = '';
+  for(let accountDataIx = 0; accountDataIx < accountDataArray.length; accountDataIx++) {
+    const accountData = accountDataArray[accountDataIx];
+    const account = accountData.account;
+    const accountSigner = accountSignerArray[accountDataIx];
+    console.log('accountSigner', accountSigner);
+
+    innerText += `${account}\n`;
+
+    const accountInfo = await window.bananocoinBananojs.getAccountInfo(
+        account,
+        true,
     );
-    const balanceDescription =
-      await window.bananocoinBananojs.getBananoPartsDescription(balanceParts);
-    innerText += `Balance ${balanceDescription}\n`;
+    // console.log('getAccountInfo', 'accountInfo', accountInfo);
+    if (accountInfo.error !== undefined) {
+      innerText += `${accountInfo.error}\n`;
+      accountDataArrayInnerHtml += `<option value="${accountDataIx}">${account} (${accountInfo.error})</option>`;
+    } else {
+      const balanceParts = await window.bananocoinBananojs.getBananoPartsFromRaw(
+          accountInfo.balance,
+      );
+      const balanceDescription =
+        await window.bananocoinBananojs.getBananoPartsDescription(balanceParts);
+      innerText += `Balance ${balanceDescription}\n`;
 
-    if (balanceParts.raw == '0') {
-      delete balanceParts.raw;
+      if (balanceParts.raw == '0') {
+        delete balanceParts.raw;
+      }
+
+      const bananoDecimal =
+        await window.bananocoinBananojs.getBananoPartsAsDecimal(balanceParts);
+
+      accountDataArrayInnerHtml += `<option value="${accountDataIx}">${account} (${bananoDecimal} BAN)</option>`;
+
+      const withdrawAmountElt = document.getElementById('withdrawAmount');
+      withdrawAmountElt.value = bananoDecimal;
+      const withdrawAccountElt = document.getElementById('withdrawAccount');
+      withdrawAccountElt.value = account;
     }
+    // console.log('banano checkpending accountData', account);
 
-    const bananoDecimal =
-      await window.bananocoinBananojs.getBananoPartsAsDecimal(balanceParts);
-    const withdrawAmountElt = document.getElementById('withdrawAmount');
-    withdrawAmountElt.value = bananoDecimal;
-    const withdrawAccountElt = document.getElementById('withdrawAccount');
-    withdrawAccountElt.value = account;
-  }
-  // console.log('banano checkpending accountData', account);
+    const pendingResponse = await window.bananocoinBananojs.getAccountsPending(
+        [account],
+        MAX_PENDING,
+        true,
+    );
+    console.log('banano checkpending pendingResponse', pendingResponse);
+    const pendingBlocks = pendingResponse.blocks[account];
 
-  const pendingResponse = await window.bananocoinBananojs.getAccountsPending(
-      [account],
-      MAX_PENDING,
-      true,
-  );
-  console.log('banano checkpending pendingResponse', pendingResponse);
-  const pendingBlocks = pendingResponse.blocks[account];
+    if (pendingBlocks !== undefined) {
+      const hashes = [...Object.keys(pendingBlocks)];
+      if (hashes.length !== 0) {
+        const specificPendingBlockHash = hashes[0];
 
-  if (pendingBlocks !== undefined) {
-    const hashes = [...Object.keys(pendingBlocks)];
-    if (hashes.length !== 0) {
-      const specificPendingBlockHash = hashes[0];
+        innerText += '\n';
+        innerText += `Receiving hash 1 of ${hashes.length}\n`;
 
-      innerText += '\n';
-      innerText += `Receiving hash 1 of ${hashes.length}\n`;
+        const bananodeApi = window.bananocoinBananojs.bananodeApi;
+        let representative = await bananodeApi.getAccountRepresentative(account);
+        if (!representative) {
+          representative = account;
+        }
+        // console.log('banano checkpending config', config);
 
-      const bananodeApi = window.bananocoinBananojs.bananodeApi;
-      let representative = await bananodeApi.getAccountRepresentative(account);
-      if (!representative) {
-        representative = account;
+        const loggingUtil = window.bananocoinBananojs.loggingUtil;
+        const depositUtil = window.bananocoinBananojs.depositUtil;
+
+        if (ledgerInUse) {
+          innerText += `CHECK LEDGER FOR BLOCK ${specificPendingBlockHash}\n`;
+        } else {
+          innerText += `RECEIVING BLOCK ${specificPendingBlockHash}\n`;
+        }
+        accountInfoElt.innerText = innerText;
+
+        console.log('banano checkpending account', account);
+        console.log('banano checkpending accountSignerArray', accountSignerArray);
+        console.log('banano checkpending representative', representative);
+        console.log(
+            'banano checkpending specificPendingBlockHash',
+            specificPendingBlockHash,
+        );
+        console.log('accountSigner', accountSigner);
+
+        const receiveResponse = await depositUtil.receive(
+            loggingUtil,
+            bananodeApi,
+            account,
+            accountSigner,
+            representative,
+            specificPendingBlockHash,
+            config.prefix,
+        );
+
+        innerText += `${receiveResponse.receiveMessage}\n`;
+        innerText += `${receiveResponse.pendingMessage}\n`;
       }
-      // console.log('banano checkpending config', config);
-
-      const loggingUtil = window.bananocoinBananojs.loggingUtil;
-      const depositUtil = window.bananocoinBananojs.depositUtil;
-
-      if (ledgerInUse) {
-        innerText += `CHECK LEDGER FOR BLOCK ${specificPendingBlockHash}\n`;
-      } else {
-        innerText += `RECEIVING BLOCK ${specificPendingBlockHash}\n`;
-      }
-      accountInfoElt.innerText = innerText;
-
-      console.log('banano checkpending account', account);
-      console.log('banano checkpending accountSigner', accountSigner);
-      console.log('banano checkpending representative', representative);
-      console.log(
-          'banano checkpending specificPendingBlockHash',
-          specificPendingBlockHash,
-      );
-
-      const receiveResponse = await depositUtil.receive(
-          loggingUtil,
-          bananodeApi,
-          account,
-          accountSigner,
-          representative,
-          specificPendingBlockHash,
-          config.prefix,
-      );
-
-      innerText += `${receiveResponse.receiveMessage}\n`;
-      innerText += `${receiveResponse.pendingMessage}\n`;
     }
   }
   accountInfoElt.innerText = innerText;
+  accountDataArrayElt.innerHTML = accountDataArrayInnerHtml;
   await synchUI();
 };
 
@@ -138,17 +176,18 @@ window.checkLedgerOrError = async () => {
   const isSupportedFlag = await TransportWebUSB.isSupported();
   console.log('connectLedger', 'isSupportedFlag', isSupportedFlag);
   if (isSupportedFlag) {
-    accountSigner = await window.bananocoin.bananojsHw.getLedgerAccountSigner(
+    const accountSigner = await window.bananocoin.bananojsHw.getLedgerAccountSigner(
         ACCOUNT_INDEX,
     );
-    accountData = {
+    accountSignerArray = [accountSigner];
+    accountDataArray = [{
       publicKey: accountSigner.getPublicKey(),
       account: accountSigner.getAccount(),
-    };
+    }];
     ledgerInUse = true;
     clearAllPasswordInfo();
     await synchUI();
-    console.log('connectLedger', 'accountData', accountData);
+    console.log('connectLedger', 'accountDataArray', accountDataArray);
     await getAccountInfo();
   }
 };
@@ -162,6 +201,18 @@ window.withdraw = async () => {
   const bananodeApi = window.bananocoinBananojs.bananodeApi;
   const bananoUtil = window.bananocoinBananojs.bananoUtil;
   const config = window.bananocoinBananojsHw.bananoConfig;
+
+
+  const accountDataArrayElt = document.getElementById('accountDataArray');
+  const accountIx = accountDataArrayElt.options[accountDataArrayElt.selectedIndex].value;
+
+  const accountSigner = accountSignerArray[accountIx];
+  const accountData = accountDataArray[accountIx];
+  const account = accountData.account;
+  if (!confirm(`withdraw '${withdrawAmount}' BAN from  account '${account}' at index ${accountIx}?`)) {
+    return;
+  }
+
   try {
     const amountRaw =
       window.bananocoinBananojs.getBananoDecimalAmountAsRaw(withdrawAmount);
@@ -183,17 +234,39 @@ window.withdraw = async () => {
   }
 };
 
-const setAccountSignerDataFromSeed = async (seed) => {
-  const privateKey = await window.bananocoinBananojs.getPrivateKey(seed, 0);
-  const publicKey = await window.bananocoinBananojs.getPublicKey(privateKey);
-  const account = window.bananocoinBananojs.getBananoAccount(publicKey);
-
-  accountSigner = privateKey;
-  accountData = {
-    publicKey: publicKey,
-    account: account,
-  };
+const setAccountSignerDataFromSeedArray = async(seedArrayStr) => {
+  const seedArray = JSON.parse(seedArrayStr);
+  accountDataArray = [];
+  accountSignerArray = [];
+  for(let seedArrayIx = 0; seedArrayIx < seedArray.length; seedArrayIx++) {
+    const seed = seedArray[seedArrayIx];
+    const privateKey = await window.bananocoinBananojs.getPrivateKey(seed, 0);
+    const publicKey = await window.bananocoinBananojs.getPublicKey(privateKey);
+    const account = window.bananocoinBananojs.getBananoAccount(publicKey);
+    accountDataArray[seedArrayIx] = {
+      publicKey: publicKey,
+      account: account,
+    };
+    accountSignerArray[seedArrayIx] = privateKey;
+  }
   await getAccountInfo();
+}
+
+const setAccountSignerDataFromSeed = async (seed) => {
+  try {
+    const privateKey = await window.bananocoinBananojs.getPrivateKey(seed, 0);
+    const publicKey = await window.bananocoinBananojs.getPublicKey(privateKey);
+    const account = window.bananocoinBananojs.getBananoAccount(publicKey);
+    accountSignerArray = [privateKey];
+    accountDataArray = [{
+      publicKey: publicKey,
+      account: account,
+    }];
+    await getAccountInfo();
+  } catch(error) {
+    console.trace(error);
+    alert(error.message);
+  }
 };
 
 const setAccountSignerDataFromMnemonic = async (mnemonic) => {
@@ -203,7 +276,7 @@ const setAccountSignerDataFromMnemonic = async (mnemonic) => {
 
 window.checkOldSeed = async () => {
   clearAccountInfo();
-  clearNewPasswordInfo();
+  clearNewSeedPasswordInfo();
   const encryptedSeed = window.localStorage.getItem('encryptedSeed');
   if (encryptedSeed == undefined) {
     alert('no seed found in local storage');
@@ -212,7 +285,7 @@ window.checkOldSeed = async () => {
     console.log('checkOldSeed', 'encryptedSeed', encryptedSeed);
     console.log('checkOldSeed', 'oldSeedPassword', oldSeedPassword);
     try {
-      unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(
+      const unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(
           encryptedSeed,
           oldSeedPassword,
       );
@@ -235,7 +308,7 @@ window.clearOldSeed = async () => {
       window.localStorage.removeItem('encryptedSeed');
     }
   }
-  clearAllPasswordInfo();
+  clearAllSeedPasswordInfo();
   clearAccountInfo();
 };
 
@@ -263,20 +336,20 @@ window.checkNewSeed = async () => {
       'localStorage.encryptedSeed',
       window.localStorage.getItem('encryptedSeed'),
   );
-  unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(
+  const unencryptedSeed = await window.bananocoin.passwordUtils.decryptData(
       encryptedSeed,
       newSeedPassword,
   );
   console.log('checkNewSeed', 'unencryptedSeed', unencryptedSeed);
   // alert(unencryptedSeed);
   document.getElementById('oldSeedPassword').value = newSeedPassword;
-  clearNewPasswordInfo();
+  clearNewSeedPasswordInfo();
   await setAccountSignerDataFromSeed(unencryptedSeed);
 };
 
 window.checkOldMnemonic = async () => {
   clearAccountInfo();
-  clearNewPasswordInfo();
+  clearNewMnemonicPasswordInfo();
   const encryptedMnemonic = window.localStorage.getItem('encryptedMnemonic');
   if (encryptedMnemonic == undefined) {
     alert('no mnemonic found in local storage');
@@ -285,7 +358,7 @@ window.checkOldMnemonic = async () => {
     console.log('checkOldMnemonic', 'encryptedMnemonic', encryptedMnemonic);
     console.log('checkOldMnemonic', 'oldMnemonicPassword', oldMnemonicPassword);
     try {
-      unencryptedMnemonic = await window.bananocoin.passwordUtils.decryptData(
+      const unencryptedMnemonic = await window.bananocoin.passwordUtils.decryptData(
           encryptedMnemonic,
           oldMnemonicPassword,
       );
@@ -308,7 +381,7 @@ window.clearOldMnemonic = async () => {
       window.localStorage.removeItem('encryptedMnemonic');
     }
   }
-  clearAllPasswordInfo();
+  clearAllMnemonicPasswordInfo();
   clearAccountInfo();
 };
 
@@ -337,15 +410,93 @@ window.checkNewMnemonic = async () => {
       'localStorage.encryptedMnemonic',
       window.localStorage.getItem('encryptedMnemonic'),
   );
-  unencryptedMnemonic = await window.bananocoin.passwordUtils.decryptData(
+  const unencryptedMnemonic = await window.bananocoin.passwordUtils.decryptData(
       encryptedMnemonic,
       newMnemonicPassword,
   );
   console.log('checkNewMnemonic', 'unencryptedMnemonic', unencryptedMnemonic);
   // alert(unencryptedMnemonic);
   document.getElementById('oldMnemonicPassword').value = newMnemonicPassword;
-  clearNewPasswordInfo();
+  clearNewMnemonicPasswordInfo();
   await setAccountSignerDataFromMnemonic(unencryptedMnemonic);
+};
+
+window.checkOldSeedArray = async () => {
+  clearAccountInfo();
+  clearNewSeedArrayPasswordInfo();
+  const encryptedSeedArray = window.localStorage.getItem('encryptedSeedArray');
+  if (encryptedSeedArray == undefined) {
+    alert('no seed found in local storage');
+  } else {
+    const oldSeedArrayPassword = document.getElementById('oldSeedArrayPassword').value;
+    console.log('checkOldSeedArray', 'encryptedSeedArray', encryptedSeedArray);
+    console.log('checkOldSeedArray', 'oldSeedArrayPassword', oldSeedArrayPassword);
+    try {
+      const unencryptedSeedArray = await window.bananocoin.passwordUtils.decryptData(
+          encryptedSeedArray,
+          oldSeedArrayPassword,
+      );
+      console.log('checkOldSeedArray', 'unencryptedSeedArray', unencryptedSeedArray);
+      // alert(unencryptedSeedArray);
+      await setAccountSignerDataFromSeedArray(unencryptedSeedArray);
+    } catch (error) {
+      console.trace('checkOldSeedArray', 'error', error);
+      alert(error.message);
+    }
+  }
+};
+
+window.clearOldSeedArray = async () => {
+  const encryptedSeedArray = window.localStorage.getItem('encryptedSeedArray');
+  if (encryptedSeedArray == undefined) {
+    alert('no seed found in local storage');
+  } else {
+    if (confirm('Clear saved seed, are you sure? This is not reversible.')) {
+      window.localStorage.removeItem('encryptedSeedArray');
+    }
+  }
+  clearAllSeedArrayPasswordInfo();
+  clearAccountInfo();
+};
+
+window.newRandomSeedArray = async () => {
+  const seedArray = [];
+  for(let ix = 0; ix < RAND_SEED_ARRAY_LENGTH; ix++) {
+    const seedBytes = new Uint8Array(32);
+    window.crypto.getRandomValues(seedBytes);
+    const seed = window.bananocoinBananojs.bananoUtil.bytesToHex(seedBytes);
+    seedArray.push(seed);
+  }
+
+  document.getElementById('newSeedArray').value = JSON.stringify(seedArray, null, 2);
+};
+
+window.checkNewSeedArray = async () => {
+  clearAccountInfo();
+  const newSeedArray = document.getElementById('newSeedArray').value;
+  const newSeedArrayPassword = document.getElementById('newSeedArrayPassword').value;
+  console.log('checkNewSeedArray', 'newSeedArray', newSeedArray);
+  console.log('checkNewSeedArray', 'newSeedArrayPassword', newSeedArrayPassword);
+  const encryptedSeedArray = await window.bananocoin.passwordUtils.encryptData(
+      newSeedArray,
+      newSeedArrayPassword,
+  );
+  window.localStorage.setItem('encryptedSeedArray', encryptedSeedArray);
+  console.log('checkNewSeedArray', 'encryptedSeedArray', encryptedSeedArray);
+  console.log(
+      'checkNewSeedArray',
+      'localStorage.encryptedSeedArray',
+      window.localStorage.getItem('encryptedSeedArray'),
+  );
+  unencryptedSeedArray = await window.bananocoin.passwordUtils.decryptData(
+      encryptedSeedArray,
+      newSeedArrayPassword,
+  );
+  console.log('checkNewSeedArray', 'unencryptedSeedArray', unencryptedSeedArray);
+  // alert(unencryptedSeedArray);
+  document.getElementById('oldSeedArrayPassword').value = newSeedArrayPassword;
+  clearNewSeedArrayPasswordInfo();
+  await setAccountSignerDataFromSeedArray(unencryptedSeedArray);
 };
 
 const synchUI = async () => {
@@ -366,6 +517,9 @@ const synchUI = async () => {
   hide('checkOldMnemonic');
   hide('clearOldMnemonic');
   hide('checkNewMnemonic');
+  hide('checkOldSeedArray');
+  hide('clearOldSeedArray');
+  hide('checkNewSeedArray');
   hide('accountData');
   const isSupportedFlag = await window.TransportWebUSB.isSupported();
   if (isSupportedFlag) {
@@ -390,6 +544,14 @@ const synchUI = async () => {
     } else {
       show('checkOldMnemonic');
       show('clearOldMnemonic');
+    }
+    const encryptedSeedArray = window.localStorage.getItem('encryptedSeedArray');
+    console.log('synchUI', 'encryptedSeedArray', encryptedSeedArray);
+    if (encryptedSeedArray == undefined) {
+      show('checkNewSeedArray');
+    } else {
+      show('checkOldSeedArray');
+      show('clearOldSeedArray');
     }
   } else {
     show('unsupportedCrypto');
