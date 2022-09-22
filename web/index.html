@@ -75,8 +75,8 @@
           </div>
 
           <div id="checkOldSeedArray" class="border_black display_none">
-            <h2>Reuse Stored Seed</h2>
-            Password for Stored Seed (required)<br />
+            <h2>Reuse Stored Seed Array</h2>
+            Password for Stored Seed Array (required)<br />
             <form>
               <input id="oldSeedArrayPassword" class="monospace small bg_white" type="password" size="66" max_length="64" value="" defaultValue="password" autocomplete="current-password" /><br />
               <button onclick="checkOldSeedArray();return false;">Check Old Seed Array Account and Pending</button>
@@ -100,13 +100,40 @@
               <button onclick="checkNewSeedArray();return false;">Check New Seed Array Account and Pending</button>
             </form>
           </div>
+
+          <div id="checkOldPrivateKey" class="border_black display_none">
+            <h2>Reuse Stored Private Key</h2>
+            Password for Stored Private Key (required)<br />
+            <form>
+              <input id="oldPrivateKeyPassword" class="monospace small bg_white" type="password" size="66" max_length="64" value="" defaultValue="password" autocomplete="current-password" /><br />
+              <button onclick="checkOldPrivateKey();return false;">Check Old Private Key Account and Pending</button>
+            </form>
+          </div>
+          <div id="clearOldPrivateKey" class="border_black display_none">
+            <form>
+              <button onclick="clearOldPrivateKey();return false;">Clear Old Private Key (confirmation required)</button>
+            </form>
+          </div>
+          <div id="checkNewPrivateKey" class="border_black display_none">
+            <h2>Store New Private Key</h2>
+            Private Key (required)<br />
+            <form>
+              <input id="fakeUsername" type="text" class="border_black display_none" autocomplete="username" />
+              <textarea id="newPrivateKey" class="monospace small bg_white" type="text" cols="68" rows="8" value="" defaultValue="seed array" autocomplete="off"></textarea>
+              <button onclick="newRandomPrivateKey();return false;">Random Private Key</button>
+              <br />
+              Password for Storing Private Key (optional)<br />
+              <input id="newPrivateKeyPassword" class="monospace small bg_white" type="password" size="66" max_length="64" value="" defaultValue="password" autocomplete="new-password" /><br />
+              <button onclick="checkNewPrivateKey();return false;">Check New Private Key Account and Pending</button>
+            </form>
+          </div>
+
           <div id="accountData" class="border_black display_none">
             <h2>Account</h2>
             <div id="accountInfo" class="break_all"></div>
             <h2>Withdraw</h2>
             <label for="accountDataArray">Choose which account to withdraw from</label><br />
-            <select name="accountDataArray" id="accountDataArray">
-            </select>
+            <select name="accountDataArray" id="accountDataArray"></select>
             <h3>Withdraw To Account</h3>
             <input id="withdrawAccount" class="monospace small bg_white" type="text" size="66" max_length="64" value="" defaultValue="To Account" />
             <h3>Withdraw Amount (Bananos)</h3>

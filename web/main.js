@@ -25,7 +25,8 @@ const clearAllPasswordInfo = () => {
   clearAllSeedPasswordInfo();
   clearAllMnemonicPasswordInfo();
   clearAllSeedArrayPasswordInfo();
-}
+  clearAllPrivateKeyPasswordInfo();
+};
 
 const clearAllSeedPasswordInfo = () => {
   clearNewSeedPasswordInfo();
@@ -57,6 +58,16 @@ const clearNewSeedArrayPasswordInfo = () => {
   document.getElementById('newSeedArrayPassword').value = '';
 };
 
+const clearAllPrivateKeyPasswordInfo = () => {
+  clearNewPrivateKeyPasswordInfo();
+  document.getElementById('oldPrivateKeyPassword').value = '';
+};
+
+const clearNewPrivateKeyPasswordInfo = () => {
+  document.getElementById('newPrivateKey').value = '';
+  document.getElementById('newPrivateKeyPassword').value = '';
+};
+
 const clearAccountInfo = async () => {
   accountSignerArray = [];
   accountDataArray = [];
@@ -72,7 +83,7 @@ const getAccountInfo = async () => {
   const accountInfoElt = document.getElementById('accountInfo');
   let innerText = '';
   let accountDataArrayInnerHtml = '';
-  for(let accountDataIx = 0; accountDataIx < accountDataArray.length; accountDataIx++) {
+  for (let accountDataIx = 0; accountDataIx < accountDataArray.length; accountDataIx++) {
     const accountData = accountDataArray[accountDataIx];
     const account = accountData.account;
     const accountSigner = accountSignerArray[accountDataIx];
@@ -240,11 +251,25 @@ window.withdraw = async () => {
   }
 };
 
-const setAccountSignerDataFromSeedArray = async(seedArrayStr) => {
+const setAccountSignerDataFromPrivateKey = async (privateKey) => {
+  accountDataArray = [];
+  accountSignerArray = [];
+  const seedArrayIx = 0;
+  const publicKey = await window.bananocoinBananojs.getPublicKey(privateKey);
+  const account = window.bananocoinBananojs.getBananoAccount(publicKey);
+  accountDataArray[seedArrayIx] = {
+    publicKey: publicKey,
+    account: account,
+  };
+  accountSignerArray[seedArrayIx] = privateKey;
+  await getAccountInfo();
+};
+
+const setAccountSignerDataFromSeedArray = async (seedArrayStr) => {
   const seedArray = JSON.parse(seedArrayStr);
   accountDataArray = [];
   accountSignerArray = [];
-  for(let seedArrayIx = 0; seedArrayIx < seedArray.length; seedArrayIx++) {
+  for (let seedArrayIx = 0; seedArrayIx < seedArray.length; seedArrayIx++) {
     const seed = seedArray[seedArrayIx];
     const privateKey = await window.bananocoinBananojs.getPrivateKey(seed, 0);
     const publicKey = await window.bananocoinBananojs.getPublicKey(privateKey);
@@ -256,7 +281,7 @@ const setAccountSignerDataFromSeedArray = async(seedArrayStr) => {
     accountSignerArray[seedArrayIx] = privateKey;
   }
   await getAccountInfo();
-}
+};
 
 const setAccountSignerDataFromSeed = async (seed) => {
   try {
@@ -269,7 +294,7 @@ const setAccountSignerDataFromSeed = async (seed) => {
       account: account,
     }];
     await getAccountInfo();
-  } catch(error) {
+  } catch (error) {
     console.trace(error);
     alert(error.message);
   }
@@ -278,6 +303,31 @@ const setAccountSignerDataFromSeed = async (seed) => {
 const setAccountSignerDataFromMnemonic = async (mnemonic) => {
   const seed = window.bip39.mnemonicToEntropy(mnemonic);
   await setAccountSignerDataFromSeed(seed);
+};
+
+window.checkOldPrivateKey = async () => {
+  clearAccountInfo();
+  clearNewPrivateKeyPasswordInfo();
+  const encryptedPrivateKey = window.localStorage.getItem('encryptedPrivateKey');
+  if (encryptedPrivateKey == undefined) {
+    alert('no PrivateKey found in local storage');
+  } else {
+    const oldPrivateKeyPassword = document.getElementById('oldPrivateKeyPassword').value;
+    console.log('checkOldPrivateKey', 'encryptedPrivateKey', encryptedPrivateKey);
+    console.log('checkOldPrivateKey', 'oldPrivateKeyPassword', oldPrivateKeyPassword);
+    try {
+      const unencryptedPrivateKey = await window.bananocoin.passwordUtils.decryptData(
+          encryptedPrivateKey,
+          oldPrivateKeyPassword,
+      );
+      console.log('checkOldPrivateKey', 'unencryptedPrivateKey', unencryptedPrivateKey);
+      // alert(unencryptedPrivateKey);
+      await setAccountSignerDataFromPrivateKey(unencryptedPrivateKey);
+    } catch (error) {
+      console.trace('checkOldPrivateKey', 'error', error);
+      alert(error.message);
+    }
+  }
 };
 
 window.checkOldSeed = async () => {
@@ -323,6 +373,41 @@ window.newRandomSeed = async () => {
   window.crypto.getRandomValues(seedBytes);
   const seed = window.bananocoinBananojs.bananoUtil.bytesToHex(seedBytes);
   document.getElementById('newSeed').value = seed;
+};
+
+window.newRandomPrivateKey = async () => {
+  const seedBytes = new Uint8Array(32);
+  window.crypto.getRandomValues(seedBytes);
+  const seed = window.bananocoinBananojs.bananoUtil.bytesToHex(seedBytes);
+  document.getElementById('newPrivateKey').value = seed;
+};
+
+window.checkNewPrivateKey = async () => {
+  clearAccountInfo();
+  const newPrivateKey = document.getElementById('newPrivateKey').value;
+  const newPrivateKeyPassword = document.getElementById('newPrivateKeyPassword').value;
+  console.log('checkNewPrivateKey', 'newPrivateKey', newPrivateKey);
+  console.log('checkNewPrivateKey', 'newPrivateKeyPassword', newPrivateKeyPassword);
+  const encryptedPrivateKey = await window.bananocoin.passwordUtils.encryptData(
+      newPrivateKey,
+      newPrivateKeyPassword,
+  );
+  window.localStorage.setItem('encryptedPrivateKey', encryptedPrivateKey);
+  console.log('checkNewPrivateKey', 'encryptedPrivateKey', encryptedPrivateKey);
+  console.log(
+      'checkNewPrivateKey',
+      'localStorage.encryptedPrivateKey',
+      window.localStorage.getItem('encryptedPrivateKey'),
+  );
+  const unencryptedPrivateKey = await window.bananocoin.passwordUtils.decryptData(
+      encryptedPrivateKey,
+      newPrivateKeyPassword,
+  );
+  console.log('checkNewPrivateKey', 'unencryptedPrivateKey', unencryptedPrivateKey);
+  // alert(unencryptedSeed);
+  document.getElementById('oldPrivateKeyPassword').value = newPrivateKeyPassword;
+  clearNewPrivateKeyPasswordInfo();
+  await setAccountSignerDataFromPrivateKey(unencryptedPrivateKey);
 };
 
 window.checkNewSeed = async () => {
@@ -467,7 +552,7 @@ window.clearOldSeedArray = async () => {
 
 window.newRandomSeedArray = async () => {
   const seedArray = [];
-  for(let ix = 0; ix < RAND_SEED_ARRAY_LENGTH; ix++) {
+  for (let ix = 0; ix < RAND_SEED_ARRAY_LENGTH; ix++) {
     const seedBytes = new Uint8Array(32);
     window.crypto.getRandomValues(seedBytes);
     const seed = window.bananocoinBananojs.bananoUtil.bytesToHex(seedBytes);
@@ -526,6 +611,9 @@ const synchUI = async () => {
   hide('checkOldSeedArray');
   hide('clearOldSeedArray');
   hide('checkNewSeedArray');
+  hide('checkOldPrivateKey');
+  hide('clearOldPrivateKey');
+  hide('checkNewPrivateKey');
   hide('accountData');
   const isSupportedFlag = await window.TransportWebUSB.isSupported();
   if (isSupportedFlag) {
@@ -558,6 +646,14 @@ const synchUI = async () => {
     } else {
       show('checkOldSeedArray');
       show('clearOldSeedArray');
+    }
+    const encryptedPrivateKey = window.localStorage.getItem('encryptedPrivateKey');
+    console.log('synchUI', 'encryptedPrivateKey', encryptedPrivateKey);
+    if (encryptedPrivateKey == undefined) {
+      show('checkNewPrivateKey');
+    } else {
+      show('checkOldPrivateKey');
+      show('clearOldPrivateKey');
     }
   } else {
     show('unsupportedCrypto');

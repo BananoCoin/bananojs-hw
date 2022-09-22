@@ -282,6 +282,21 @@ exports.getInfosForServiceUuid = getInfosForServiceUuid;
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-param-reassign */
 /* eslint-disable no-prototype-builtins */
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var __values = (this && this.__values) || function(o) {
     var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
     if (m) return m.call(o);
@@ -302,17 +317,43 @@ var addCustomErrorDeserializer = function (name, deserializer) {
 };
 exports.addCustomErrorDeserializer = addCustomErrorDeserializer;
 var createCustomErrorClass = function (name) {
-    var C = function CustomError(message, fields) {
-        Object.assign(this, fields);
-        this.name = name;
-        this.message = message || name;
-        this.stack = new Error().stack;
-    };
-    C.prototype = new Error();
-    errorClasses[name] = C;
-    return C;
+    var CustomErrorClass = /** @class */ (function (_super) {
+        __extends(CustomErrorClass, _super);
+        function CustomErrorClass(message, fields, options) {
+            var _this = 
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            _super.call(this, message || name, options) || this;
+            // Set the prototype explicitly. See https://github.com/Microsoft/TypeScript/wiki/Breaking-Changes#extending-built-ins-like-error-array-and-map-may-no-longer-work
+            Object.setPrototypeOf(_this, CustomErrorClass.prototype);
+            _this.name = name;
+            if (fields) {
+                for (var k in fields) {
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-ignore
+                    _this[k] = fields[k];
+                }
+            }
+            if (isObject(options) && "cause" in options && !("cause" in _this)) {
+                // .cause was specified but the superconstructor
+                // did not create an instance property.
+                var cause = options.cause;
+                _this.cause = cause;
+                if ("stack" in cause) {
+                    _this.stack = _this.stack + "\nCAUSE: " + cause.stack;
+                }
+            }
+            return _this;
+        }
+        return CustomErrorClass;
+    }(Error));
+    errorClasses[name] = CustomErrorClass;
+    return CustomErrorClass;
 };
 exports.createCustomErrorClass = createCustomErrorClass;
+function isObject(value) {
+    return value !== null && typeof value === "object";
+}
 // inspired from https://github.com/programble/errio/blob/master/index.js
 var deserializeError = function (object) {
     if (typeof object === "object" && object) {
@@ -371,7 +412,7 @@ var serializeError = function (value) {
         return destroyCircular(value, []);
     }
     if (typeof value === "function") {
-        return "[Function: " + (value.name || "anonymous") + "]";
+        return "[Function: ".concat(value.name || "anonymous", "]");
     }
     return value;
 };
@@ -420,10 +461,25 @@ function destroyCircular(from, seen) {
 
 },{}],5:[function(require,module,exports){
 "use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 exports.__esModule = true;
-exports.NotEnoughBalanceInParentAccount = exports.NotEnoughBalanceToDelegate = exports.NotEnoughBalance = exports.NoAddressesFound = exports.NetworkDown = exports.ManagerUninstallBTCDep = exports.ManagerNotEnoughSpaceError = exports.ManagerFirmwareNotEnoughSpaceError = exports.ManagerDeviceLockedError = exports.ManagerAppDepUninstallRequired = exports.ManagerAppDepInstallRequired = exports.ManagerAppRelyOnBTCError = exports.ManagerAppAlreadyInstalledError = exports.LedgerAPINotAvailable = exports.LedgerAPIErrorWithMessage = exports.LedgerAPIError = exports.UnknownMCU = exports.LatestMCUInstalledError = exports.InvalidAddressBecauseDestinationIsAlsoSource = exports.InvalidAddress = exports.InvalidXRPTag = exports.HardResetFail = exports.FirmwareNotRecognized = exports.FeeEstimationFailed = exports.EthAppPleaseEnableContractData = exports.EnpointConfigError = exports.DisconnectedDeviceDuringOperation = exports.DisconnectedDevice = exports.DeviceSocketNoBulkStatus = exports.DeviceSocketFail = exports.DeviceNameInvalid = exports.DeviceHalted = exports.DeviceInOSUExpected = exports.DeviceOnDashboardUnexpected = exports.DeviceOnDashboardExpected = exports.DeviceNotGenuineError = exports.DeviceGenuineSocketEarlyClose = exports.DeviceAppVerifyNotSupported = exports.CurrencyNotSupported = exports.CashAddrNotSupported = exports.CantOpenDevice = exports.BtcUnmatchedApp = exports.BluetoothRequired = exports.AmountRequired = exports.AccountNotSupported = exports.AccountNameRequiredError = exports.addCustomErrorDeserializer = exports.createCustomErrorClass = exports.deserializeError = exports.serializeError = void 0;
-exports.StatusCodes = exports.TransportError = exports.DBNotReset = exports.DBWrongPassword = exports.NoDBPathGiven = exports.FirmwareOrAppUpdateRequired = exports.LedgerAPI5xx = exports.LedgerAPI4xx = exports.GenuineCheckFailed = exports.PairingFailed = exports.SyncError = exports.FeeTooHigh = exports.FeeRequired = exports.FeeNotLoaded = exports.CantScanQRCode = exports.ETHAddressNonEIP = exports.WrongAppForCurrency = exports.WrongDeviceForAccount = exports.WebsocketConnectionFailed = exports.WebsocketConnectionError = exports.DeviceShouldStayInApp = exports.TransportWebUSBGestureRequired = exports.TransportRaceCondition = exports.TransportInterfaceNotAvailable = exports.TransportOpenUserCancelled = exports.UserRefusedOnDevice = exports.UserRefusedAllowManager = exports.UserRefusedFirmwareUpdate = exports.UserRefusedAddress = exports.UserRefusedDeviceNameChange = exports.UpdateYourApp = exports.UpdateIncorrectSig = exports.UpdateIncorrectHash = exports.UpdateFetchFileFail = exports.UnavailableTezosOriginatedAccountSend = exports.UnavailableTezosOriginatedAccountReceive = exports.RecipientRequired = exports.MCUNotGenuineToDashboard = exports.UnexpectedBootloader = exports.TimeoutTagged = exports.RecommendUndelegation = exports.RecommendSubAccountsToEmpty = exports.PasswordIncorrectError = exports.PasswordsDontMatchError = exports.GasLessThanEstimate = exports.NotSupportedLegacyAddress = exports.NotEnoughGas = exports.NoAccessToCamera = exports.NotEnoughBalanceBecauseDestinationNotCreated = exports.NotEnoughSpendableBalance = void 0;
-exports.TransportStatusError = exports.getAltStatusMessage = void 0;
+exports.NotEnoughBalance = exports.NoAddressesFound = exports.NetworkDown = exports.ManagerUninstallBTCDep = exports.ManagerNotEnoughSpaceError = exports.ManagerFirmwareNotEnoughSpaceError = exports.ManagerDeviceLockedError = exports.ManagerAppDepUninstallRequired = exports.ManagerAppDepInstallRequired = exports.ManagerAppRelyOnBTCError = exports.ManagerAppAlreadyInstalledError = exports.LedgerAPINotAvailable = exports.LedgerAPIErrorWithMessage = exports.LedgerAPIError = exports.UnknownMCU = exports.LatestMCUInstalledError = exports.InvalidAddressBecauseDestinationIsAlsoSource = exports.InvalidAddress = exports.InvalidXRPTag = exports.HardResetFail = exports.FirmwareNotRecognized = exports.FeeEstimationFailed = exports.EthAppPleaseEnableContractData = exports.EnpointConfigError = exports.DeviceOnboardingStatePollingError = exports.DeviceExtractOnboardingStateError = exports.DisconnectedDeviceDuringOperation = exports.DisconnectedDevice = exports.DeviceSocketNoBulkStatus = exports.DeviceSocketFail = exports.DeviceNameInvalid = exports.DeviceHalted = exports.DeviceInOSUExpected = exports.DeviceOnDashboardUnexpected = exports.DeviceOnDashboardExpected = exports.DeviceNotGenuineError = exports.DeviceGenuineSocketEarlyClose = exports.DeviceAppVerifyNotSupported = exports.CurrencyNotSupported = exports.CashAddrNotSupported = exports.CantOpenDevice = exports.BtcUnmatchedApp = exports.BluetoothRequired = exports.AmountRequired = exports.AccountNotSupported = exports.AccountNameRequiredError = exports.addCustomErrorDeserializer = exports.createCustomErrorClass = exports.deserializeError = exports.serializeError = void 0;
+exports.DBWrongPassword = exports.NoDBPathGiven = exports.LanguageNotFound = exports.FirmwareOrAppUpdateRequired = exports.LedgerAPI5xx = exports.LedgerAPI4xx = exports.GenuineCheckFailed = exports.PairingFailed = exports.SyncError = exports.FeeTooHigh = exports.FeeRequired = exports.FeeNotLoaded = exports.CantScanQRCode = exports.ETHAddressNonEIP = exports.WrongAppForCurrency = exports.WrongDeviceForAccount = exports.WebsocketConnectionFailed = exports.WebsocketConnectionError = exports.DeviceShouldStayInApp = exports.TransportWebUSBGestureRequired = exports.TransportRaceCondition = exports.TransportInterfaceNotAvailable = exports.TransportOpenUserCancelled = exports.UserRefusedOnDevice = exports.UserRefusedAllowManager = exports.UserRefusedFirmwareUpdate = exports.UserRefusedAddress = exports.UserRefusedDeviceNameChange = exports.UpdateYourApp = exports.UpdateIncorrectSig = exports.UpdateIncorrectHash = exports.UpdateFetchFileFail = exports.UnavailableTezosOriginatedAccountSend = exports.UnavailableTezosOriginatedAccountReceive = exports.RecipientRequired = exports.MCUNotGenuineToDashboard = exports.UnexpectedBootloader = exports.TimeoutTagged = exports.RecommendUndelegation = exports.RecommendSubAccountsToEmpty = exports.PasswordIncorrectError = exports.PasswordsDontMatchError = exports.GasLessThanEstimate = exports.NotSupportedLegacyAddress = exports.NotEnoughGas = exports.NoAccessToCamera = exports.NotEnoughBalanceBecauseDestinationNotCreated = exports.NotEnoughSpendableBalance = exports.NotEnoughBalanceInParentAccount = exports.NotEnoughBalanceToDelegate = void 0;
+exports.TransportStatusError = exports.getAltStatusMessage = exports.StatusCodes = exports.TransportError = exports.DBNotReset = void 0;
 var helpers_1 = require("./helpers");
 exports.serializeError = helpers_1.serializeError;
 exports.deserializeError = helpers_1.deserializeError;
@@ -449,6 +505,8 @@ exports.DeviceSocketFail = (0, helpers_1.createCustomErrorClass)("DeviceSocketFa
 exports.DeviceSocketNoBulkStatus = (0, helpers_1.createCustomErrorClass)("DeviceSocketNoBulkStatus");
 exports.DisconnectedDevice = (0, helpers_1.createCustomErrorClass)("DisconnectedDevice");
 exports.DisconnectedDeviceDuringOperation = (0, helpers_1.createCustomErrorClass)("DisconnectedDeviceDuringOperation");
+exports.DeviceExtractOnboardingStateError = (0, helpers_1.createCustomErrorClass)("DeviceExtractOnboardingStateError");
+exports.DeviceOnboardingStatePollingError = (0, helpers_1.createCustomErrorClass)("DeviceOnboardingStatePollingError");
 exports.EnpointConfigError = (0, helpers_1.createCustomErrorClass)("EnpointConfig");
 exports.EthAppPleaseEnableContractData = (0, helpers_1.createCustomErrorClass)("EthAppPleaseEnableContractData");
 exports.FeeEstimationFailed = (0, helpers_1.createCustomErrorClass)("FeeEstimationFailed");
@@ -520,6 +578,7 @@ exports.GenuineCheckFailed = (0, helpers_1.createCustomErrorClass)("GenuineCheck
 exports.LedgerAPI4xx = (0, helpers_1.createCustomErrorClass)("LedgerAPI4xx");
 exports.LedgerAPI5xx = (0, helpers_1.createCustomErrorClass)("LedgerAPI5xx");
 exports.FirmwareOrAppUpdateRequired = (0, helpers_1.createCustomErrorClass)("FirmwareOrAppUpdateRequired");
+exports.LanguageNotFound = (0, helpers_1.createCustomErrorClass)("LanguageNotFound");
 // db stuff, no need to translate
 exports.NoDBPathGiven = (0, helpers_1.createCustomErrorClass)("NoDBPathGiven");
 exports.DBWrongPassword = (0, helpers_1.createCustomErrorClass)("DBWrongPassword");
@@ -528,14 +587,21 @@ exports.DBNotReset = (0, helpers_1.createCustomErrorClass)("DBNotReset");
  * TransportError is used for any generic transport errors.
  * e.g. Error thrown when data received by exchanges are incorrect or if exchanged failed to communicate with the device for various reason.
  */
-function TransportError(message, id) {
-    this.name = "TransportError";
-    this.message = message;
-    this.stack = new Error().stack;
-    this.id = id;
-}
+var TransportError = /** @class */ (function (_super) {
+    __extends(TransportError, _super);
+    function TransportError(message, id) {
+        var _this = this;
+        var name = "TransportError";
+        _this = _super.call(this, message || name) || this;
+        _this.name = name;
+        _this.message = message;
+        _this.stack = new Error().stack;
+        _this.id = id;
+        return _this;
+    }
+    return TransportError;
+}(Error));
 exports.TransportError = TransportError;
-TransportError.prototype = new Error();
 (0, helpers_1.addCustomErrorDeserializer)("TransportError", function (e) { return new TransportError(e.message, e.id); });
 exports.StatusCodes = {
     PIN_REMAINING_ATTEMPTS: 0x63c0,
@@ -601,7 +667,7 @@ function TransportStatusError(statusCode) {
         "UNKNOWN_ERROR";
     var smsg = getAltStatusMessage(statusCode) || statusText;
     var statusCodeStr = statusCode.toString(16);
-    this.message = "Ledger device: " + smsg + " (0x" + statusCodeStr + ")";
+    this.message = "Ledger device: ".concat(smsg, " (0x").concat(statusCodeStr, ")");
     this.stack = new Error().stack;
     this.statusCode = statusCode;
     this.statusText = statusText;
