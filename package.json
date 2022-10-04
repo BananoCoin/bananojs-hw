@@ -1,6 +1,6 @@
 {
   "name": "@bananocoin/bananojs-hw",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "module": "index.js",
   "main": "web/index.html",
   "repository": {
@@ -13,7 +13,7 @@
     "browserify-BananoHwApp": "browserify browserify/BananoHwApp.js -o dist/BananoHwApp.js",
     "webpack-TransportWebUSB": "webpack --config webpack.config.js",
     "eslint": "eslint --fix '**/*.js'",
-    "npm-check-updates": "npm-check-updates --target minor -u -x @ledgerhq/hw-transport-node-hid,@ledgerhq/hw-transport-webusb",
+    "npm-check-updates": "npm-check-updates --target minor -u",
     "npm-check-outdated": "npm outdated",
     "preflight": "npm update && npm run npm-check-updates && npm run npm-check-outdated && npm i && npm audit fix && npm run browserify && npm run eslint && npm run prettier && npm run npm-check-outdated && echo 'preflight passed'",
     "prettier": "prettier \"**/**.{ts,json,css,scss,html}\" --write",
