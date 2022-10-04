@@ -1,19 +1,20 @@
 {
   "name": "@bananocoin/bananojs-hw",
-  "version": "1.3.15",
+  "version": "1.4.1",
   "module": "index.js",
+  "main": "web/index.html",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bananocoin/bananojs-hw.git"
   },
   "scripts": {
-    "browserify": "npm run browserify-BananoHwApp && npm run browserify-TransportWebUSB && npm run browserify-bip39",
+    "browserify": "npm run browserify-BananoHwApp && npm run webpack-TransportWebUSB && npm run browserify-bip39",
     "browserify-bip39": "browserify browserify/bip39.js -o dist/bip39.js",
     "browserify-BananoHwApp": "browserify browserify/BananoHwApp.js -o dist/BananoHwApp.js",
-    "browserify-TransportWebUSB": "browserify browserify/TransportWebUSB.js -o dist/TransportWebUSB.js",
+    "webpack-TransportWebUSB": "webpack --config webpack.config.js",
     "eslint": "eslint --fix '**/*.js'",
     "npm-check-updates": "npm-check-updates --target minor -u -x @ledgerhq/hw-transport-node-hid,@ledgerhq/hw-transport-webusb",
-    "npm-check-outdated": "npm outdated|grep -v '@ledgerhq/hw-transport'",
+    "npm-check-outdated": "npm outdated",
     "preflight": "npm update && npm run npm-check-updates && npm run npm-check-outdated && npm i && npm audit fix && npm run browserify && npm run eslint && npm run prettier && npm run npm-check-outdated && echo 'preflight passed'",
     "prettier": "prettier \"**/**.{ts,json,css,scss,html}\" --write",
     "start": "node main.js"
@@ -22,26 +23,23 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@bananocoin/bananojs": "^2.6.23",
-    "@ledgerhq/hw-transport-node-hid": "6.27.1",
+    "@bananocoin/bananojs": "^2.7.2",
+    "@ledgerhq/hw-transport-node-hid": "^6.27.6",
     "hw-app-nano": "^1.3.0"
   },
   "devDependencies": {
-    "@ledgerhq/hw-transport-webusb": "6.27.1",
+    "@ledgerhq/hw-transport-webusb": "^6.27.6",
     "bip39": "^3.0.4",
     "browserify": "^17.0.0",
     "chai": "^4.3.6",
-    "eslint": "^8.23.1",
+    "eslint": "^8.24.0",
     "eslint-config-google": "^0.14.0",
     "mocha": "^10.0.0",
-    "npm-check-updates": "^16.2.1",
+    "npm-check-updates": "^16.3.8",
     "nyc": "^15.1.0",
-    "prettier": "^2.7.1"
-  },
-  "resolutions": {
-    "@ledgerhq/devices": "6.27.1",
-    "@ledgerhq/hw-transport": "6.27.1",
-    "@ledgerhq/hw-transport-webhid": "6.27.1"
+    "prettier": "^2.7.1",
+    "webpack": "^5.74.0",
+    "webpack-cli": "^4.10.0"
   },
   "description": "JavaScript utilities for the banano cryptocurrency.",
   "bugs": {
