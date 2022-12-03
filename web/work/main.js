@@ -1,4 +1,5 @@
 let finished = true;
+let restart = true;
 
 let workers;
 let wasmStartMs;
@@ -33,12 +34,15 @@ window.newRandomPrevious = async () => {
 };
 
 window.randomPreviousAndStartNewRace = async () => {
-  await delay(1000);
-  await newRandomPrevious();
-  await startNewRace();
+  if (restart) {
+    await delay(1000);
+    await newRandomPrevious();
+    await startNewRace();
+  }
 };
 
 window.startNewRace = async () => {
+  restart = true;
   const keys = [...Object.keys(finishedFlags)];
   for (const key of keys) {
     finishedFlags[key] = false;
@@ -50,6 +54,11 @@ window.startNewRace = async () => {
   startWasm();
   startJS();
   synchStats();
+};
+
+window.stopRaceNoRestart = () => {
+  restart = false;
+  stopRace();
 };
 
 window.stopRace = () => {
