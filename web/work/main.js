@@ -3,7 +3,9 @@ let restart = true;
 
 let workers;
 let wasmStartMs;
-const threshold = '0xfffffe0000000000';
+// const threshold = '0xFFFFFFF8';
+// const threshold = '0xFFFFFFF0';
+const threshold = '0xFFFFFE00';
 
 const finishedFlags = {
   wasm: true,
