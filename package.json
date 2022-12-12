@@ -1,6 +1,6 @@
 {
   "name": "@bananocoin/bananojs-hw",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "module": "index.js",
   "main": "web/index.html",
   "repository": {
@@ -34,12 +34,12 @@
     "chai": "^4.3.7",
     "eslint": "^8.29.0",
     "eslint-config-google": "^0.14.0",
-    "mocha": "^10.1.0",
-    "npm-check-updates": "^16.4.3",
+    "mocha": "^10.2.0",
+    "npm-check-updates": "^16.5.6",
     "nyc": "^15.1.0",
-    "prettier": "^2.8.0",
+    "prettier": "^2.8.1",
     "webpack": "^5.75.0",
-    "webpack-cli": "^5.0.0"
+    "webpack-cli": "^5.0.1"
   },
   "description": "JavaScript utilities for the banano cryptocurrency.",
   "bugs": {
