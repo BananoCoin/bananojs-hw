@@ -3,6 +3,7 @@ let restart = true;
 
 let workers;
 let wasmStartMs;
+const threshold = '0xfffffe0000000000'
 
 const finishedFlags = {
   wasm: true,
@@ -139,6 +140,7 @@ window.startWebGL = async () => {
 
         document.getElementById('webglWork').value = 'Calculated ' + n + ' frames...';
       },
+      threshold,
   );
 };
 
