@@ -9,6 +9,8 @@
     npm --no-git-tag-version version patch;npm run browserify;
 
     git commit -a -m 'updating dependencies';
+    git pull;
+    git push;
 
     npm publish --access public;
 
