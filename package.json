@@ -1,6 +1,6 @@
 {
   "name": "@bananocoin/bananojs-hw",
-  "version": "1.4.8",
+  "version": "1.5.1",
   "module": "index.js",
   "main": "index.js",
   "repository": {
@@ -8,10 +8,11 @@
     "url": "git+https://github.com/bananocoin/bananojs-hw.git"
   },
   "scripts": {
-    "browserify": "npm run browserify-BananoHwApp && npm run webpack-TransportWebUSB && npm run browserify-bip39",
+    "browserify": "npm run browserify-BananoHwApp && npm run webpack-TransportWebUSB && npm run webpack-TransportWebHID && npm run browserify-bip39",
     "browserify-bip39": "browserify browserify/bip39.js -o dist/bip39.js",
     "browserify-BananoHwApp": "browserify browserify/BananoHwApp.js -o dist/BananoHwApp.js",
-    "webpack-TransportWebUSB": "webpack --config webpack.config.js",
+    "webpack-TransportWebUSB": "webpack --config webpack-WebUSB.config.js",
+    "webpack-TransportWebHID": "webpack --config webpack-WebHID.config.js",
     "eslint": "eslint --fix '**/*.js'",
     "npm-check-updates": "npm-check-updates --target minor -u",
     "npm-check-outdated": "npm outdated",
@@ -23,12 +24,12 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@bananocoin/bananojs": "^2.7.12",
-    "@ledgerhq/hw-transport-node-hid": "^6.27.9",
+    "@bananocoin/bananojs": "^2.7.13",
+    "@ledgerhq/hw-transport-node-hid": "^6.27.10",
     "hw-app-nano": "^1.3.0"
   },
   "devDependencies": {
-    "@ledgerhq/hw-transport-webusb": "^6.27.9",
+    "@ledgerhq/hw-transport-webusb": "^6.27.10",
     "bip39": "^3.0.4",
     "browserify": "^17.0.0",
     "chai": "^4.3.7",
