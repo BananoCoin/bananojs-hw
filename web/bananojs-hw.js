@@ -54,7 +54,7 @@ window.bananocoin.bananojsHw.getLedgerAccountSigner = async (accountIx) => {
     const ledgerPath = getLedgerPath(accountIx);
     accountData = await banHwAppInst.getAddress(ledgerPath);
   } finally {
-    transport.close();
+    await transport.close();
   }
   const signer = {};
   signer.getPublicKey = () => {
@@ -118,7 +118,7 @@ window.bananocoin.bananojsHw.getLedgerAccountSigner = async (accountIx) => {
       // console.log('signer.signBlock', 'hwBlockData', hwBlockData);
       return await banHwAppInst.signBlock(ledgerPath, hwBlockData);
     } finally {
-      transport.close();
+      await transport.close();
     }
   };
   return signer;
