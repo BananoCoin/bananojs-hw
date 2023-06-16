@@ -26,7 +26,13 @@
   };
 
   const getLedgerPath = (accountIndex) => {
-    return `${config.walletPrefix}${accountIndex}'`;
+    if (typeof (accountIndex) === 'number') {
+      return `${config.walletPrefix}${accountIndex}'`;
+    } else {
+      // TODO: Find out why this function is being called with the ledgerPath instead of accountIndex
+      console.error(`unexpected type for accountIndex: ${typeof(accountIndex)}`);
+      return `${accountIndex}`;
+    }
   };
 
   const getLedgerInfo = async () => {
@@ -54,7 +60,25 @@
     return retval;
   };
 
+  const getLedgerAddressFromIndex = async (index) => {
+    try {
+      const accountData = await getLedgerAccountData(index);
+    } catch (error) {
+      return undefined;
+    }
+
+    return accountData?.account;
+  };
+
   const getLedgerAccountData = async (index) => {
+    try {
+      return await getLedgerAccountDataUsingWebUSB(index);
+    } catch(error) {
+      console.log('error from getLedgerAccountData calling getLedgerAccountDataUsingWebUSB', error.message);
+    }
+  };
+
+  const getLedgerAccountDataUsingWebUSB = async (index) => {
     // https://github.com/BananoCoin/bananovault/blob/master/src/app/services/ledger.service.ts#L128
     try {
       const paths = await transportNodeHid.default.list();
@@ -63,9 +87,14 @@
       try {
         const banHwAppInst = new BananoHwApp(transport);
         const accountData = await banHwAppInst.getAddress(getLedgerPath(index));
-        accountData.account = accountData.address;
-        delete accountData.address;
-        return accountData;
+        //  accountData will be undefined if the Banano ledger app isn't opened and ready.
+        if (accountData !== undefined) {
+          accountData.account = accountData.address;
+          delete accountData.address;
+          return accountData;
+        }
+      } catch(error) {
+        console.trace('banano getAddress error', error);
       } finally {
         await transport.close();
       }
@@ -83,6 +112,11 @@
     if (accountIx === undefined) {
       throw Error('accountIx is a required parameter.');
     }
+
+    createSignerUsingWebUSB(accountIx);
+  };
+
+  const createSignerUsingWebUSB = async (accountIx) => {
     // https://github.com/BananoCoin/bananovault/blob/master/src/app/services/ledger.service.ts#L379
     const paths = await transportNodeHid.default.list();
     const path = paths[0];
@@ -125,8 +159,8 @@
 
           const cacheBlockData = {};
           const cacheBlocks = await bananodeApi.getBlocks(
-              [blockData.previous],
-              true,
+            [blockData.previous],
+            true,
           );
           // console.log('signer.signBlock', 'cacheBlocks', cacheBlocks);
           const cacheBlock = cacheBlocks.blocks[blockData.previous];
@@ -139,9 +173,9 @@
           try {
             // const cacheResponse =
             await banHwAppInst.cacheBlock(
-                ledgerPath,
-                cacheBlockData,
-                cacheBlock.signature,
+              ledgerPath,
+              cacheBlockData,
+              cacheBlock.signature,
             );
             // console.log('signer.signBlock', 'cacheResponse', cacheResponse);
           } catch (error) {
@@ -157,7 +191,11 @@
       }
     };
     return signer;
-  };
+  }
+
+  const onUsbReady = async (callback) => {
+    callback();
+  }
 
   // STARTED BOTTOM nodejs/browser hack
   const exports = (() => {
@@ -173,7 +211,9 @@
     exports.getConfig = getConfig;
     exports.getLedgerPath = getLedgerPath;
     exports.getLedgerAccountData = getLedgerAccountData;
+    exports.getLedgerAddressFromIndex = getLedgerAddressFromIndex;
     exports.getLedgerAccountSigner = getLedgerAccountSigner;
+    exports.onUsbReady = onUsbReady;
 
     return exports;
   })();

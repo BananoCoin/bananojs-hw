@@ -193,7 +193,7 @@ window.checkLedgerOrError = async () => {
   const isSupportedFlag = await TransportWebUSB.isSupported();
   console.log('connectLedger', 'isSupportedFlag', isSupportedFlag);
   if (isSupportedFlag) {
-    const accountSigner = await window.bananocoin.bananojsHw.getLedgerAccountSigner(
+    const accountSigner = await window.bananocoinBananojsHw.getLedgerAccountSigner(
         ACCOUNT_INDEX,
     );
     accountSignerArray = [accountSigner];
