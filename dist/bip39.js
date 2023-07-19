@@ -20,9 +20,9 @@ function bool(b) {
 exports.bool = bool;
 function bytes(b, ...lengths) {
     if (!(b instanceof Uint8Array))
-        throw new TypeError('Expected Uint8Array');
+        throw new Error('Expected Uint8Array');
     if (lengths.length > 0 && !lengths.includes(b.length))
-        throw new TypeError(`Expected Uint8Array of length ${lengths}, not of length=${b.length}`);
+        throw new Error(`Expected Uint8Array of length ${lengths}, not of length=${b.length}`);
 }
 exports.bytes = bytes;
 function hash(hash) {
@@ -254,7 +254,7 @@ exports.crypto = typeof globalThis === 'object' && 'crypto' in globalThis ? glob
 },{}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hmac = void 0;
+exports.hmac = exports.HMAC = void 0;
 const _assert_js_1 = require("./_assert.js");
 const utils_js_1 = require("./utils.js");
 // HMAC (RFC 2104)
@@ -267,7 +267,7 @@ class HMAC extends utils_js_1.Hash {
         const key = (0, utils_js_1.toBytes)(_key);
         this.iHash = hash.create();
         if (typeof this.iHash.update !== 'function')
-            throw new TypeError('Expected instance of class which extends utils.Hash');
+            throw new Error('Expected instance of class which extends utils.Hash');
         this.blockLen = this.iHash.blockLen;
         this.outputLen = this.iHash.outputLen;
         const blockLen = this.blockLen;
@@ -323,6 +323,7 @@ class HMAC extends utils_js_1.Hash {
         this.iHash.destroy();
     }
 }
+exports.HMAC = HMAC;
 /**
  * HMAC: RFC2104 message authentication code.
  * @param hash - function that would be used e.g. sha256
@@ -793,13 +794,15 @@ exports.sha384 = (0, utils_js_1.wrapConstructor)(() => new SHA384());
 "use strict";
 /*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.randomBytes = exports.wrapConstructorWithOpts = exports.wrapConstructor = exports.checkOpts = exports.Hash = exports.concatBytes = exports.toBytes = exports.utf8ToBytes = exports.asyncLoop = exports.nextTick = exports.hexToBytes = exports.bytesToHex = exports.isLE = exports.rotr = exports.createView = exports.u32 = exports.u8 = void 0;
-// We use `globalThis.crypto`, but node.js versions earlier than v19 don't
-// declare it in global scope. For node.js, package.json#exports field mapping
-// rewrites import from `crypto` to `cryptoNode`, which imports native module.
+exports.randomBytes = exports.wrapXOFConstructorWithOpts = exports.wrapConstructorWithOpts = exports.wrapConstructor = exports.checkOpts = exports.Hash = exports.concatBytes = exports.toBytes = exports.utf8ToBytes = exports.asyncLoop = exports.nextTick = exports.hexToBytes = exports.bytesToHex = exports.isLE = exports.rotr = exports.createView = exports.u32 = exports.u8 = void 0;
+// We use WebCrypto aka globalThis.crypto, which exists in browsers and node.js 16+.
+// node.js versions earlier than v19 don't declare it in global scope.
+// For node.js, package.json#exports field mapping rewrites import
+// from `crypto` to `cryptoNode`, which imports native module.
 // Makes the utils un-importable in browsers without a bundler.
 // Once node.js 18 is deprecated, we can just drop the import.
 const crypto_1 = require("@noble/hashes/crypto");
+const u8a = (a) => a instanceof Uint8Array;
 // Cast array to different type
 const u8 = (arr) => new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
 exports.u8 = u8;
@@ -818,29 +821,29 @@ if (!exports.isLE)
     throw new Error('Non little-endian hardware is not supported');
 const hexes = Array.from({ length: 256 }, (v, i) => i.toString(16).padStart(2, '0'));
 /**
- * @example bytesToHex(Uint8Array.from([0xde, 0xad, 0xbe, 0xef])) // 'deadbeef'
+ * @example bytesToHex(Uint8Array.from([0xca, 0xfe, 0x01, 0x23])) // 'cafe0123'
  */
-function bytesToHex(uint8a) {
-    // pre-caching improves the speed 6x
-    if (!(uint8a instanceof Uint8Array))
+function bytesToHex(bytes) {
+    if (!u8a(bytes))
         throw new Error('Uint8Array expected');
+    // pre-caching improves the speed 6x
     let hex = '';
-    for (let i = 0; i < uint8a.length; i++) {
-        hex += hexes[uint8a[i]];
+    for (let i = 0; i < bytes.length; i++) {
+        hex += hexes[bytes[i]];
     }
     return hex;
 }
 exports.bytesToHex = bytesToHex;
 /**
- * @example hexToBytes('deadbeef') // Uint8Array.from([0xde, 0xad, 0xbe, 0xef])
+ * @example hexToBytes('cafe0123') // Uint8Array.from([0xca, 0xfe, 0x01, 0x23])
  */
 function hexToBytes(hex) {
-    if (typeof hex !== 'string') {
-        throw new TypeError('hexToBytes: expected string, got ' + typeof hex);
-    }
-    if (hex.length % 2)
-        throw new Error('hexToBytes: received invalid unpadded hex');
-    const array = new Uint8Array(hex.length / 2);
+    if (typeof hex !== 'string')
+        throw new Error('hex string expected, got ' + typeof hex);
+    const len = hex.length;
+    if (len % 2)
+        throw new Error('padded hex string expected, got unpadded hex of length ' + len);
+    const array = new Uint8Array(len / 2);
     for (let i = 0; i < array.length; i++) {
         const j = i * 2;
         const hexByte = hex.slice(j, j + 2);
@@ -871,38 +874,41 @@ async function asyncLoop(iters, tick, cb) {
     }
 }
 exports.asyncLoop = asyncLoop;
+/**
+ * @example utf8ToBytes('abc') // new Uint8Array([97, 98, 99])
+ */
 function utf8ToBytes(str) {
-    if (typeof str !== 'string') {
-        throw new TypeError(`utf8ToBytes expected string, got ${typeof str}`);
-    }
-    return new TextEncoder().encode(str);
+    if (typeof str !== 'string')
+        throw new Error(`utf8ToBytes expected string, got ${typeof str}`);
+    return new Uint8Array(new TextEncoder().encode(str)); // https://bugzil.la/1681809
 }
 exports.utf8ToBytes = utf8ToBytes;
+/**
+ * Normalizes (non-hex) string or Uint8Array to Uint8Array.
+ * Warning: when Uint8Array is passed, it would NOT get copied.
+ * Keep in mind for future mutable operations.
+ */
 function toBytes(data) {
     if (typeof data === 'string')
         data = utf8ToBytes(data);
-    if (!(data instanceof Uint8Array))
-        throw new TypeError(`Expected input type is Uint8Array (got ${typeof data})`);
+    if (!u8a(data))
+        throw new Error(`expected Uint8Array, got ${typeof data}`);
     return data;
 }
 exports.toBytes = toBytes;
 /**
- * Concats Uint8Array-s into one; like `Buffer.concat([buf1, buf2])`
- * @example concatBytes(buf1, buf2)
+ * Copies several Uint8Arrays into one.
  */
 function concatBytes(...arrays) {
-    if (!arrays.every((a) => a instanceof Uint8Array))
-        throw new Error('Uint8Array list expected');
-    if (arrays.length === 1)
-        return arrays[0];
-    const length = arrays.reduce((a, arr) => a + arr.length, 0);
-    const result = new Uint8Array(length);
-    for (let i = 0, pad = 0; i < arrays.length; i++) {
-        const arr = arrays[i];
-        result.set(arr, pad);
-        pad += arr.length;
-    }
-    return result;
+    const r = new Uint8Array(arrays.reduce((sum, a) => sum + a.length, 0));
+    let pad = 0; // walk through each item, ensure they have proper type
+    arrays.forEach((a) => {
+        if (!u8a(a))
+            throw new Error('Uint8Array expected');
+        r.set(a, pad);
+        pad += a.length;
+    });
+    return r;
 }
 exports.concatBytes = concatBytes;
 // For runtime check if class implements interface
@@ -917,17 +923,17 @@ exports.Hash = Hash;
 const isPlainObject = (obj) => Object.prototype.toString.call(obj) === '[object Object]' && obj.constructor === Object;
 function checkOpts(defaults, opts) {
     if (opts !== undefined && (typeof opts !== 'object' || !isPlainObject(opts)))
-        throw new TypeError('Options should be object or undefined');
+        throw new Error('Options should be object or undefined');
     const merged = Object.assign(defaults, opts);
     return merged;
 }
 exports.checkOpts = checkOpts;
-function wrapConstructor(hashConstructor) {
-    const hashC = (message) => hashConstructor().update(toBytes(message)).digest();
-    const tmp = hashConstructor();
+function wrapConstructor(hashCons) {
+    const hashC = (msg) => hashCons().update(toBytes(msg)).digest();
+    const tmp = hashCons();
     hashC.outputLen = tmp.outputLen;
     hashC.blockLen = tmp.blockLen;
-    hashC.create = () => hashConstructor();
+    hashC.create = () => hashCons();
     return hashC;
 }
 exports.wrapConstructor = wrapConstructor;
@@ -940,8 +946,17 @@ function wrapConstructorWithOpts(hashCons) {
     return hashC;
 }
 exports.wrapConstructorWithOpts = wrapConstructorWithOpts;
+function wrapXOFConstructorWithOpts(hashCons) {
+    const hashC = (msg, opts) => hashCons(opts).update(toBytes(msg)).digest();
+    const tmp = hashCons({});
+    hashC.outputLen = tmp.outputLen;
+    hashC.blockLen = tmp.blockLen;
+    hashC.create = (opts) => hashCons(opts);
+    return hashC;
+}
+exports.wrapXOFConstructorWithOpts = wrapXOFConstructorWithOpts;
 /**
- * Secure PRNG. Uses `globalThis.crypto` or node.js crypto module.
+ * Secure PRNG. Uses `crypto.getRandomValues`, which defers to OS.
  */
 function randomBytes(bytesLength = 32) {
     if (crypto_1.crypto && typeof crypto_1.crypto.getRandomValues === 'function') {
