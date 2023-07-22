@@ -50,9 +50,14 @@ const getLedgerAccountDataUsingWebUSB = async (index) => {
   }
 }
 
-const getLedgerAccountDataUsingU2F = async (index) => {
+const getLedgerAccountDataUsingU2F = async (indexOrLedgerPath) => {
+  let ledgerPath;
+  if (typeof(indexOrLedgerPath) === 'number') {
+    ledgerPath = window.bananocoinBananojsHw.getLedgerPath(indexOrLedgerPath);
+  } else {
+    ledgerPath = indexOrLedgerPath;
+  }
   try {
-    const ledgerPath = window.bananocoinBananojsHw.getLedgerPath(index);
     console.log(`getLedgerPath return: ${ledgerPath}`);
     return await window.u2fInst.getAddress(ledgerPath);
   } catch (error) {
@@ -159,6 +164,7 @@ window.bananocoin.bananojsHw.getLedgerAccountSigner = async (accountIx) => {
   }
 
   if (window.u2fInst) {
+    console.log(`createSignerUsingU2F: ${accountIx}`);
     return createSignerUsingU2F(accountIx);
   }
 };
@@ -264,7 +270,7 @@ const createSignerUsingWebUSB = async (accountIx) => {
 }
 
 const createSignerUsingU2F = async (accountIx) => {
-  console.log(`createSignerUsingU2F`);
+  console.log(`createSignerUsingU2F_2: ${accountIx}`);
   const getLedgerPath = window.bananocoinBananojsHw.getLedgerPath;
   const bananodeApi = window.bananocoinBananojs.bananodeApi;
 
