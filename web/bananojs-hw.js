@@ -94,6 +94,7 @@ window.bananocoin.bananojsHw.onUsbReady = async (callback) => {
       callback();
     } catch(error) {
       console.log(`neither webUSB or u2f is available for initiating usb connection`);
+      console.error(error);
     }
   }
 }
