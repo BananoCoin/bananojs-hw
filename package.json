@@ -26,8 +26,8 @@
   "license": "MIT",
   "dependencies": {
     "@bananocoin/bananojs": "^2.9.1",
-    "@ledgerhq/hw-transport": "^6.27.18",
-    "@ledgerhq/hw-transport-node-hid": "^6.27.18",
+    "@ledgerhq/hw-transport": "^6.27.1",
+    "@ledgerhq/hw-transport-node-hid": "^6.27.1",
     "@ledgerhq/hw-transport-u2f": "^5.34.0",
     "hw-app-nano": "^1.3.0"
   },
