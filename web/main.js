@@ -9,8 +9,171 @@ let accountDataArray = [];
 let ledgerInUse = false;
 const config = window.bananocoinBananojsHw.bananoConfig;
 
+window.stop = true;
+
+const getDate = () => {
+  return new Date().toISOString().substring(0, 19);
+};
+
+const delay = (time) => {
+  if (!isNaN(time)) {
+    if (isFinite(time)) {
+      return new Promise((resolve) => {
+        const fn = () => {
+          resolve();
+        };
+        setTimeout(fn, time);
+      });
+    }
+  }
+};
+
+window.stopCheckWords = async () => {
+  window.stop = true;
+};
+
+window.checkWords = async () => {
+  window.bananocoinBananojs.setBananodeApiUrl(config.bananodeUrl);
+  const allWordsResp = await fetch('https://raw.githubusercontent.com/bitcoin/bips/master/bip-0039/english.txt', {
+    method: 'get',
+  });
+  const allWords = (await allWordsResp.text()).split('\n');
+  console.log('allWords', allWords);
+
+  const testWords = document.getElementById('checkWordsStatus').value.split('\n');
+  let foundSeed = false;
+  window.stop = false;
+
+  document.getElementById('checkWordsStatus').value = 'starting';
+
+  let lastDate = '';
+  let totalCount = 0;
+  let seedCount = 0;
+  let accountCount = 0;
+  let stopCount = 0;
+
+  const getCheckWords = (testWord, checkWords) => {
+    for (let allWordIx = 0; allWordIx < allWords.length; allWordIx++) {
+      const allWord = allWords[allWordIx];
+      if (testWord.length == allWord.length) {
+        if (testWord.substring(0, 1) == allWord.substring(0, 1)) {
+          // if(testWord == allWord) {
+          checkWords.push(allWord);
+          // }
+        }
+      }
+    }
+  };
+
+  const checkWords = [];
+  const checksumWords = [];
+  // checksumWords.push(testWords[testWords.length-1]);
+  getCheckWords(testWords[testWords.length-1], checksumWords);
+  for (let testWordIx = 0; testWordIx < testWords.length-1; testWordIx++) {
+    const testWord = testWords[testWordIx];
+    checkWords[testWordIx] = [];
+    getCheckWords(testWord, checkWords[testWordIx]);
+  }
+  for (let testWordIx0 = 0; testWordIx0 < testWords.length-1; testWordIx0++) {
+    for (let testWordIx1 = testWordIx0+1; testWordIx1 < testWords.length-1; testWordIx1++) {
+      const checkWords0 = checkWords[testWordIx0];
+      const checkWords1 = checkWords[testWordIx1];
+      stopCount += checkWords0.length * checkWords1.length * checksumWords.length;
+    }
+  }
+  const setStatus = (status, details) => {
+    document.getElementById('checkWordsStatus').value = [
+      getDate(),
+      totalCount, 'of', stopCount,
+      'seed:', seedCount,
+      'account:', accountCount, '\n',
+      status, 'details', details,
+    ];
+  };
+  for (let testWordIx0 = 0; testWordIx0 < testWords.length-1; testWordIx0++) {
+    for (let testWordIx1 = testWordIx0+1; testWordIx1 < testWords.length-1; testWordIx1++) {
+      console.log('testWord0', testWords[testWordIx0]);
+      console.log('testWord1', testWords[testWordIx1]);
+      const checkWords0 = checkWords[testWordIx0];
+      console.log('checkWords0', checkWords0);
+      const checkWords1 = checkWords[testWordIx1];
+      console.log('checkWords1', checkWords1);
+      console.log('checksumWords', checksumWords);
+      for (let ix0 = 0; ix0 < checkWords0.length; ix0++) {
+        for (let ix1 = 0; ix1 < checkWords1.length; ix1++) {
+          await delay(0);
+          for (let checksumWordIx = 0; checksumWordIx < checksumWords.length; checksumWordIx++) {
+            totalCount++;
+
+            const date = getDate();
+            if (date != lastDate) {
+              setStatus('test',
+                  [testWordIx0,
+                    testWordIx1,
+                    testWords.length,
+                    ix0,
+                    checkWords0.length,
+                    ix1,
+                    checkWords1.length,
+                    checksumWordIx,
+                    checksumWords.length,
+                  ],
+              );
+              lastDate = date;
+            }
+            // return;
+            if (window.stop) {
+              console.log('stopped');
+              document.getElementById('checkWordsStatus').value = 'stopped';
+              return;
+            }
+            const fn = async () => {
+              const testWordsClone = [...testWords];
+              testWordsClone[testWordIx0] = checkWords0[ix0];
+              testWordsClone[testWordIx1] = checkWords1[ix1];
+              testWordsClone[testWordsClone.length-1] = checksumWords[checksumWordIx];
+              // console.log('testWordsClone', testWordsClone);
+              let seed;
+              try {
+                foundSeed = true;
+                seed = window.bip39.mnemonicToEntropy(testWordsClone.join(' '));
+              } catch (error) {
+              // console.log('error', error);
+                foundSeed = false;
+              }
+              if (foundSeed) {
+                await delay(1000);
+                seedCount++;
+                const privateKey = await window.bananocoinBananojs.getPrivateKey(seed, 0);
+                const publicKey = await window.bananocoinBananojs.getPublicKey(privateKey);
+                const account = window.bananocoinBananojs.getBananoAccount(publicKey);
+                const accountInfo = await window.bananocoinBananojs.getAccountInfo(
+                    account,
+                    true,
+                );
+                console.log('seed', seed, accountInfo.error);
+                if (accountInfo.error === undefined) {
+                  accountCount++;
+                  console.log('accountInfo', accountInfo);
+                  console.log('testWordsClone', testWordsClone);
+                }
+              }
+            };
+            await fn();
+          }
+        // console.log('foundSeed', foundSeed);
+        }
+      }
+    }
+  }
+  window.stop = true;
+  console.log('done');
+  setStatus('done');
+};
+
 window.onLoad = async () => {
   await synchUI();
+  // checkWords();
 };
 
 window.checkLedger = async () => {

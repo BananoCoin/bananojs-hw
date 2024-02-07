@@ -16,6 +16,13 @@
     <table class="w100pct">
       <tr>
         <td class="w100pct border_black align_top">
+          <div id="checkWords" class="border_black">
+            <h2>Words</h2>
+            <textarea id="testWords" class="monospace small bg_white" type="text" cols="66" rows="8" value="" defaultValue="mnemonic" autocomplete="off"></textarea>
+            <button onclick="checkWords();return false;">Check Words</button><br />
+            <button onclick="stopCheckWords();return false;">Stop Check Words</button><br />
+            <textarea id="checkWordsStatus" class="monospace small bg_white" type="text" cols="66" rows="8" value="" defaultValue="mnemonic" autocomplete="off"></textarea>
+          </div>
           <div id="unsupportedLedger" class="border_black display_none">Ledger not supported, check that site is https.</div>
           <div id="unsupportedCrypto" class="border_black display_none">window.crypto.subtle not supported, check that site is https.</div>
           <div id="checkLedger" class="border_black display_none">
